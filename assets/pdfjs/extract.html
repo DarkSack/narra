@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <script src="pdf.min.js"></script>
+  </head>
+  <body>
+    <script>
+      // Bridge between the React Native host and pdf.js running inside this WebView.
+      // The host posts { pdfUri } once; this page fetches the PDF, extracts text
+      // page by page and streams progress + the final result back via postMessage.
+
+      function post(message) {
+        if (window.ReactNativeWebView) {
+          window.ReactNativeWebView.postMessage(JSON.stringify(message));
+        }
+      }
+
+      async function extract(pdfUri) {
+        try {
+          pdfjsLib.GlobalWorkerOptions.workerSrc = 'pdf.worker.min.js';
+
+          const response = await fetch(pdfUri);
+          const buffer = await response.arrayBuffer();
+
+          const doc = await pdfjsLib.getDocument({ data: buffer }).promise;
+          const numPages = doc.numPages;
+          const pages = [];
+
+          for (let pageNumber = 1; pageNumber <= numPages; pageNumber++) {
+            const page = await doc.getPage(pageNumber);
+            const content = await page.getTextContent();
+            const text = content.items.map((item) => item.str).join(' ');
+            pages.push(text);
+            post({ type: 'progress', page: pageNumber, totalPages: numPages });
+          }
+
+          post({ type: 'done', pages, totalPages: numPages });
+        } catch (error) {
+          post({ type: 'error', message: String((error && error.message) || error) });
+        }
+      }
+
+      function handleMessage(event) {
+        try {
+          const data = JSON.parse(event.data);
+          if (data && data.type === 'extract' && data.pdfUri) {
+            extract(data.pdfUri);
+          }
+        } catch (e) {
+          post({ type: 'error', message: 'Bad message from host: ' + String(e) });
+        }
+      }
+
+      document.addEventListener('message', handleMessage);
+      window.addEventListener('message', handleMessage);
+    </script>
+  </body>
+</html>

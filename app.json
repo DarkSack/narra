@@ -1,15 +1,19 @@
 {
   "expo": {
-    "name": "pdf-audiobooks",
+    "name": "PDF Audiolibros",
     "slug": "pdf-audiobooks",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
+    "scheme": "pdfaudiobooks",
     "userInterfaceStyle": "light",
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "bundleIdentifier": "com.pdfaudiobooks.app"
     },
     "android": {
+      "package": "com.pdfaudiobooks.app",
+      "permissions": ["INTERNET"],
       "adaptiveIcon": {
         "backgroundColor": "#E6F4FE",
         "foregroundImage": "./assets/android-icon-foreground.png",
@@ -20,6 +24,15 @@
     },
     "web": {
       "favicon": "./assets/favicon.png"
+    },
+    "plugins": [
+      "expo-sqlite",
+      "expo-router",
+      "expo-status-bar",
+      "expo-asset"
+    ],
+    "experiments": {
+      "typedRoutes": true
     }
   }
 }
