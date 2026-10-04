@@ -194,9 +194,35 @@ private class AndroidTtsSession(private val context: Context) : TtsSession {
         }
     }
 
-    /** Elige motor, voz, velocidad y tono, solo si cambian: cambiar de voz es lento. */
+    /**
+     * Motor que atiende cada configuración sin motor elegido. Se resuelve una vez por sesión:
+     * probar motores es lento.
+     */
+    private val resolved = HashMap<VoiceSettings, String>()
+
+    /**
+     * Elige motor, voz, velocidad y tono. Sin motor ni voz concretos (la voz «del idioma»), vale
+     * cualquier motor instalado que tenga ese idioma listo: primero el predeterminado del
+     * teléfono y, si no lo tiene descargado, los demás.
+     */
     private suspend fun prepare(voice: VoiceSettings): TextToSpeech {
-        val name = voice.engine ?: defaultEngine
+        if (voice.engine != null || voice.voiceId != null) return prepareOn(voice.engine ?: defaultEngine, voice)
+        resolved[voice]?.let { return prepareOn(it, voice) }
+        val candidates = listOf(defaultEngine) + engines.getValue(defaultEngine).engines.map { it.name }.filter { it != defaultEngine }
+        var failure: NarraException? = null
+        for (name in candidates) {
+            try {
+                return prepareOn(name, voice).also { resolved[voice] = name }
+            } catch (e: NarraException) {
+                if (e.kind != ErrorKind.VOICE_UNAVAILABLE && e.kind != ErrorKind.TTS_UNAVAILABLE) throw e
+                if (failure == null) failure = e
+            }
+        }
+        throw failure ?: NarraException(ErrorKind.VOICE_UNAVAILABLE, voice.languageTag)
+    }
+
+    /** Aplica [voice] en el motor [name], solo si cambia: cambiar de voz es lento. */
+    private suspend fun prepareOn(name: String, voice: VoiceSettings): TextToSpeech {
         val tts = engine(name)
         if (applied[name] == voice) return tts
         val system = voice.voiceId?.let { id -> tts.voices.orEmpty().firstOrNull { it.name == id } }

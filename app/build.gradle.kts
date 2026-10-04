@@ -45,6 +45,10 @@ android {
 
     packaging {
         resources.excludes += "/META-INF/{AL2.0,LGPL2.1}"
+        // Tablas de algoritmos post-cuánticos de Bouncy Castle (unos 8 MB). PdfBox usa Bouncy
+        // Castle para descifrar PDF protegidos, que nunca emplean estos algoritmos.
+        resources.excludes += "org/bouncycastle/pqc/crypto/picnic/*.properties"
+        resources.excludes += "org/bouncycastle/pqc/crypto/sike/*.properties"
     }
 }
 

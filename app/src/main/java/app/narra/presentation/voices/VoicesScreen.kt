@@ -117,14 +117,14 @@ fun VoicesScreen(onBack: () -> Unit, viewModel: VoicesViewModel = hiltViewModel(
             if (state.engineError == null && !state.loading) {
                 Surface(tonalElevation = 3.dp) {
                     Button(
-                        onClick = { if (state.hasAudio) askRegenerate = true else viewModel.save() },
-                        enabled = state.dirty,
+                        onClick = { if (state.hasAudio && state.dirty) askRegenerate = true else viewModel.save() },
+                        enabled = state.canSave,
                         modifier = Modifier
                             .fillMaxWidth()
                             .windowInsetsPadding(WindowInsets.navigationBars)
                             .padding(horizontal = NarraTheme.tokens.screenPadding, vertical = 12.dp)
                             .height(52.dp),
-                    ) { Text("Guardar") }
+                    ) { Text(if (state.dirty || !state.stoppedByVoice) "Guardar" else "Reintentar con esta voz") }
                 }
             }
         },

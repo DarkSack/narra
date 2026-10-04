@@ -30,6 +30,9 @@ import kotlinx.coroutines.launch
 import java.util.Locale
 import javax.inject.Inject
 
+/** Errores con los que la creación se detiene hasta que se elija o se instale una voz. */
+private val VOICE_ERRORS = setOf(ErrorKind.VOICE_UNAVAILABLE, ErrorKind.TTS_UNAVAILABLE, ErrorKind.NETWORK)
+
 data class VoicesUiState(
     val loading: Boolean = true,
     /** El motor no arrancó: no hay voces que mostrar. */
@@ -58,6 +61,15 @@ data class VoicesUiState(
 
     /** El libro ya tiene audio: cambiar la voz plantea si regenerarlo. */
     val hasAudio: Boolean get() = (book?.segmentsAvailable ?: 0) > 0
+
+    /**
+     * La creación del audio se detuvo por la voz. Guardar la reanuda aunque no haya cambios: la
+     * voz puede haberse descargado después o resolverse con otro motor del teléfono.
+     */
+    val stoppedByVoice: Boolean
+        get() = book?.let { it.state == BookState.ERROR && it.error?.kind in VOICE_ERRORS && it.chapterCount > 0 } == true
+
+    val canSave: Boolean get() = dirty || stoppedByVoice
 
     /** Ninguna voz del idioma del libro está descargada: hay que avisar antes de que falle la creación. */
     val missingLanguageVoices: Boolean
@@ -210,7 +222,7 @@ class VoicesViewModel @Inject constructor(
                         queue.generate(book.id)
                     }
                     // La creación se había detenido por la voz: con la nueva, sigue sola.
-                    book.state == BookState.ERROR && book.error?.kind in VOICE_ERRORS && book.chapterCount > 0 -> queue.retry(book.id)
+                    _state.value.stoppedByVoice -> queue.retry(book.id)
                 }
             }
             _state.update { it.copy(dirty = false) }
@@ -232,7 +244,6 @@ class VoicesViewModel @Inject constructor(
     }
 
     private companion object {
-        val VOICE_ERRORS = setOf(ErrorKind.VOICE_UNAVAILABLE, ErrorKind.TTS_UNAVAILABLE, ErrorKind.NETWORK)
         const val DEFAULT_SAMPLE = "Hola. Esta es la voz que leerá tus libros. ¿Te gusta cómo suena?"
         const val MAX_SAMPLE_CHARS = 280
         const val MIN_SAMPLE_PARAGRAPH = 60

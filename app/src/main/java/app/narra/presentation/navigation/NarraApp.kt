@@ -148,7 +148,12 @@ fun NarraApp(viewModel: AppViewModel, settings: AppSettings) {
         val isPlayer = destination.isRoute(PlayerRoute::class)
         val adaptiveType = NavigationSuiteScaffoldDefaults.calculateFromAdaptiveInfo(currentWindowAdaptiveInfo())
         val suiteType = if (isTopLevel) adaptiveType else NavigationSuiteType.None
-        val showMini = miniPlayer != null && !isPlayer
+        // Las pantallas con su propia barra de acciones abajo (crear, guardar) no llevan el mini
+        // reproductor encima: la taparía. Tampoco la introducción.
+        val hasOwnBottomBar = destination.isRoute(ImportRoute::class) ||
+            destination.isRoute(VoicesRoute::class) ||
+            destination.isRoute(OnboardingRoute::class)
+        val showMini = miniPlayer != null && !isPlayer && !hasOwnBottomBar
         val systemBottom = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
         val bottomOverlay: Dp = (if (showMini) MINI_PLAYER_SPACE else 0.dp) +
             (if (suiteType == NavigationSuiteType.NavigationBar) 0.dp else systemBottom)

@@ -28,6 +28,7 @@ import app.narra.core.designsystem.component.EmptyState
 import app.narra.core.designsystem.theme.NarraTheme
 import app.narra.domain.model.Paragraph
 import app.narra.domain.model.SegmentKind
+import app.narra.presentation.navigation.LocalBottomOverlayPadding
 
 /** El texto limpio de un capítulo, tal como lo leerá la voz. */
 @Composable
@@ -58,7 +59,7 @@ fun ChapterTextScreen(onBack: () -> Unit, viewModel: ChapterTextViewModel = hilt
                 start = NarraTheme.tokens.screenPadding,
                 end = NarraTheme.tokens.screenPadding,
                 top = padding.calculateTopPadding() + 8.dp,
-                bottom = padding.calculateBottomPadding() + 32.dp,
+                bottom = padding.calculateBottomPadding() + LocalBottomOverlayPadding.current + 32.dp,
             ),
             horizontalAlignment = Alignment.CenterHorizontally,
             modifier = Modifier.fillMaxSize(),
