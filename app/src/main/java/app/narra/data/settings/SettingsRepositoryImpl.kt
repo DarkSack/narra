@@ -67,6 +67,7 @@ class SettingsRepositoryImpl @Inject constructor(
         val autoPlay = booleanPreferencesKey("auto_play")
         val provider = stringPreferencesKey("tts_provider")
         val voice = stringPreferencesKey("tts_voice")
+        val engine = stringPreferencesKey("tts_engine")
         val voiceLanguage = stringPreferencesKey("tts_language")
         val ttsRate = floatPreferencesKey("tts_rate")
         val ttsPitch = floatPreferencesKey("tts_pitch")
@@ -101,6 +102,7 @@ class SettingsRepositoryImpl @Inject constructor(
             autoPlayWhenReady = this[Keys.autoPlay] ?: defaults.autoPlayWhenReady,
             defaultVoice = VoiceSettings(
                 providerId = this[Keys.provider] ?: voiceDefaults.providerId,
+                engine = this[Keys.engine],
                 voiceId = this[Keys.voice],
                 languageTag = this[Keys.voiceLanguage],
                 speechRate = this[Keys.ttsRate] ?: voiceDefaults.speechRate,
@@ -133,6 +135,7 @@ class SettingsRepositoryImpl @Inject constructor(
         this[Keys.autoPlay] = s.autoPlayWhenReady
         this[Keys.provider] = s.defaultVoice.providerId
         s.defaultVoice.voiceId?.let { this[Keys.voice] = it } ?: remove(Keys.voice)
+        s.defaultVoice.engine?.let { this[Keys.engine] = it } ?: remove(Keys.engine)
         s.defaultVoice.languageTag?.let { this[Keys.voiceLanguage] = it } ?: remove(Keys.voiceLanguage)
         this[Keys.ttsRate] = s.defaultVoice.speechRate
         this[Keys.ttsPitch] = s.defaultVoice.pitch

@@ -84,6 +84,7 @@ import app.narra.core.ui.formatPercent
 import app.narra.core.ui.formatSpeed
 import app.narra.domain.model.BookState
 import app.narra.playback.SleepTimerState
+import app.narra.presentation.common.chapterHeading
 import app.narra.presentation.components.ChapterRow
 import app.narra.presentation.components.CustomSleepMinutes
 import app.narra.presentation.components.SleepTimerSelector
@@ -192,7 +193,7 @@ private fun PlayerBody(state: PlayerUiState, viewModel: PlayerViewModel, onSheet
             Spacer(Modifier.height(6.dp))
             val timeline = state.timeline
             Text(
-                timeline?.let { "Capítulo ${it.chapterNumber} · ${it.chapterTitle.orEmpty()}" } ?: snapshot.chapterTitle.orEmpty(),
+                timeline?.let { chapterHeading(it.chapterNumber, it.chapterTitle) } ?: snapshot.chapterTitle.orEmpty(),
                 style = MaterialTheme.typography.labelLarge,
                 color = MaterialTheme.colorScheme.primary,
                 textAlign = TextAlign.Center,

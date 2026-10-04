@@ -47,6 +47,7 @@ internal fun BookEntity.metadata() = BookMetadata(
 
 internal fun BookEntity.voiceSettings() = VoiceSettings(
     providerId = voiceProviderId,
+    engine = voiceEngine,
     voiceId = voiceId,
     languageTag = voiceLanguage,
     speechRate = speechRate,

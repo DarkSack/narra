@@ -30,7 +30,11 @@ import javax.inject.Inject
 import javax.inject.Singleton
 import android.speech.tts.Voice as SystemVoice
 
-/** Motor de voz del sistema (Google, Samsung, RHVoice…). Todo ocurre en el teléfono. */
+/**
+ * Motores de voz instalados en Android (Google, Samsung, eSpeak, RHVoice…). Se puede usar
+ * cualquiera, no solo el predeterminado del teléfono. Todo ocurre en el dispositivo salvo las
+ * voces marcadas como "en línea", que el propio motor resuelve con su servicio.
+ */
 @Singleton
 class AndroidTtsProvider @Inject constructor(
     @ApplicationContext private val context: Context,
@@ -39,7 +43,7 @@ class AndroidTtsProvider @Inject constructor(
     override val info = TtsProviderInfo(
         id = VoiceSettings.ANDROID_TTS_PROVIDER_ID,
         displayName = "Voces del teléfono",
-        description = "Usa el motor de voz instalado en Android. Las voces sin conexión no envían el texto a ningún sitio.",
+        description = "Usa los motores de voz instalados en Android. Las voces sin conexión no envían el texto a ningún sitio.",
         capabilities = TtsCapabilities(
             supportsPitch = true,
             supportsRate = true,
@@ -50,91 +54,126 @@ class AndroidTtsProvider @Inject constructor(
     )
 
     override suspend fun open(): TtsSession {
-        val ready = CompletableDeferred<Int>()
-        val engine = withContext(Dispatchers.Main) { TextToSpeech(context) { status -> ready.complete(status) } }
-        val status = withTimeoutOrNull(INIT_TIMEOUT_MS) { ready.await() }
-        if (status != TextToSpeech.SUCCESS) {
-            engine.shutdown()
-            throw NarraException(ErrorKind.TTS_UNAVAILABLE, "init=$status")
+        val session = AndroidTtsSession(context)
+        try {
+            session.connectDefault()
+        } catch (e: NarraException) {
+            session.close()
+            throw e
         }
-        return AndroidTtsSession(engine)
-    }
-
-    private companion object {
-        const val INIT_TIMEOUT_MS = 15_000L
+        return session
     }
 }
 
-private class AndroidTtsSession(private val engine: TextToSpeech) : TtsSession {
+private class AndroidTtsSession(private val context: Context) : TtsSession {
     private val pending = ConcurrentHashMap<String, CompletableDeferred<Unit>>()
     private val mutex = Mutex()
-    private var applied: VoiceSettings? = null
+
+    /** Motores ya conectados, por paquete. Se conectan la primera vez que hacen falta. */
+    private val engines = ConcurrentHashMap<String, TextToSpeech>()
+    private val applied = HashMap<String, VoiceSettings>()
+    private lateinit var defaultEngine: String
 
     override val maxInputChars: Int = TextToSpeech.getMaxSpeechInputLength()
 
-    init {
-        engine.setOnUtteranceProgressListener(object : UtteranceProgressListener() {
-            override fun onStart(utteranceId: String) = Unit
+    private val listener = object : UtteranceProgressListener() {
+        override fun onStart(utteranceId: String) = Unit
 
-            override fun onDone(utteranceId: String) {
-                pending.remove(utteranceId)?.complete(Unit)
-            }
+        override fun onDone(utteranceId: String) {
+            pending.remove(utteranceId)?.complete(Unit)
+        }
 
-            @Deprecated("Deprecated in Java")
-            override fun onError(utteranceId: String) = onError(utteranceId, TextToSpeech.ERROR)
+        @Deprecated("Deprecated in Java")
+        override fun onError(utteranceId: String) = onError(utteranceId, TextToSpeech.ERROR)
 
-            override fun onError(utteranceId: String, errorCode: Int) {
-                pending.remove(utteranceId)?.completeExceptionally(failure(errorCode))
-            }
+        override fun onError(utteranceId: String, errorCode: Int) {
+            pending.remove(utteranceId)?.completeExceptionally(failure(errorCode))
+        }
 
-            override fun onStop(utteranceId: String, interrupted: Boolean) {
-                pending.remove(utteranceId)?.completeExceptionally(NarraException(ErrorKind.SYNTHESIS_FAILED, "stopped"))
-            }
-        })
+        override fun onStop(utteranceId: String, interrupted: Boolean) {
+            pending.remove(utteranceId)?.completeExceptionally(NarraException(ErrorKind.SYNTHESIS_FAILED, "stopped"))
+        }
     }
 
-    override suspend fun voices(): List<Voice> = withContext(Dispatchers.Default) {
-        engine.voices.orEmpty()
-            .groupBy { it.locale }
-            .flatMap { (locale, voices) ->
-                voices.sortedBy { it.name }.mapIndexed { index, voice -> voice.toDomain(locale, index) }
+    /** Conecta el motor predeterminado del teléfono; si no hay ninguno, no hay voz posible. */
+    suspend fun connectDefault() {
+        val tts = connect(null)
+        defaultEngine = tts.defaultEngine
+        engines[defaultEngine] = tts
+    }
+
+    private suspend fun connect(packageName: String?): TextToSpeech {
+        val ready = CompletableDeferred<Int>()
+        val tts = withContext(Dispatchers.Main) {
+            TextToSpeech(context, { status -> ready.complete(status) }, packageName)
+        }
+        val status = withTimeoutOrNull(INIT_TIMEOUT_MS) { ready.await() }
+        if (status != TextToSpeech.SUCCESS) {
+            tts.shutdown()
+            throw NarraException(ErrorKind.TTS_UNAVAILABLE, "init ${packageName ?: "predeterminado"}=$status")
+        }
+        tts.setOnUtteranceProgressListener(listener)
+        return tts
+    }
+
+    private suspend fun engine(packageName: String?): TextToSpeech {
+        val name = packageName ?: defaultEngine
+        engines[name]?.let { return it }
+        // El motor elegido se desinstaló: la voz ya no está disponible.
+        if (engines.getValue(defaultEngine).engines.none { it.name == name }) throw NarraException(ErrorKind.VOICE_UNAVAILABLE, name)
+        return connect(name).also { engines[name] = it }
+    }
+
+    override suspend fun voices(): List<Voice> = mutex.withLock {
+        engines.getValue(defaultEngine).engines.flatMap { info ->
+            val tts = try {
+                engine(info.name)
+            } catch (_: NarraException) {
+                return@flatMap emptyList()
             }
-            .sortedWith(compareBy({ it.languageLabel }, { it.regionLabel.orEmpty() }, { it.requiresNetwork }, { it.displayName }))
+            tts.voices.orEmpty()
+                .groupBy { LocaleCodes.normalize(it.locale) }
+                .flatMap { (locale, voices) ->
+                    voices.sortedBy { it.name }.mapIndexed { index, voice -> voice.toDomain(info.name, info.label, locale, index) }
+                }
+        }.sortedWith(
+            // Dentro de cada idioma y región: primero lo que se puede usar ya, después lo que hay que descargar.
+            compareBy<Voice>({ it.languageLabel }, { it.regionLabel.orEmpty() }, { !it.isInstalled }, { it.engine != defaultEngine }, { it.engineLabel })
+                .thenBy { it.requiresNetwork }
+                .thenBy { it.displayName },
+        )
     }
 
     override suspend fun synthesize(text: String, voice: VoiceSettings, target: File) = mutex.withLock {
         require(text.length <= maxInputChars) { "Texto de ${text.length} caracteres; el máximo es $maxInputChars" }
-        apply(voice)
+        val tts = prepare(voice)
         target.parentFile?.mkdirs()
         target.delete()
         val id = UUID.randomUUID().toString()
-        runUtterance(id, timeoutFor(text)) {
-            engine.synthesizeToFile(text, Bundle.EMPTY, target, id)
-        }
+        runUtterance(tts, id, timeoutFor(text)) { tts.synthesizeToFile(text, Bundle.EMPTY, target, id) }
         if (target.length() <= MIN_WAV_BYTES) throw NarraException(ErrorKind.SYNTHESIS_FAILED, "archivo vacío")
     }
 
     override suspend fun speak(text: String, voice: VoiceSettings) = mutex.withLock {
-        apply(voice)
+        val tts = prepare(voice)
         val id = UUID.randomUUID().toString()
-        runUtterance(id, timeoutFor(text)) {
-            engine.speak(text, TextToSpeech.QUEUE_FLUSH, Bundle.EMPTY, id)
-        }
+        runUtterance(tts, id, timeoutFor(text)) { tts.speak(text, TextToSpeech.QUEUE_FLUSH, Bundle.EMPTY, id) }
     }
 
     override fun stop() {
-        engine.stop()
+        engines.values.forEach { it.stop() }
         pending.values.forEach { it.cancel() }
         pending.clear()
     }
 
     override fun close() {
         stop()
-        engine.shutdown()
+        engines.values.forEach { it.shutdown() }
+        engines.clear()
     }
 
     /** Lanza la petición y espera su final; si la corrutina se cancela, detiene el motor. */
-    private suspend fun runUtterance(id: String, timeoutMs: Long, start: () -> Int) {
+    private suspend fun runUtterance(tts: TextToSpeech, id: String, timeoutMs: Long, start: () -> Int) {
         val done = CompletableDeferred<Unit>()
         pending[id] = done
         if (start() != TextToSpeech.SUCCESS) {
@@ -144,35 +183,38 @@ private class AndroidTtsSession(private val engine: TextToSpeech) : TtsSession {
         try {
             withTimeout(timeoutMs) { done.await() }
         } catch (timeout: TimeoutCancellationException) {
-            engine.stop()
+            tts.stop()
             throw NarraException(ErrorKind.SYNTHESIS_FAILED, "sin respuesta", timeout)
         } finally {
-            if (pending.remove(id) != null) engine.stop()
+            if (pending.remove(id) != null) tts.stop()
         }
     }
 
-    /** Aplica voz, velocidad y tono solo cuando cambian: el motor tarda en cambiar de voz. */
-    private fun apply(voice: VoiceSettings) {
-        if (voice == applied) return
-        val system = voice.voiceId?.let { id -> engine.voices.orEmpty().firstOrNull { it.name == id } }
+    /** Elige motor, voz, velocidad y tono, solo si cambian: cambiar de voz es lento. */
+    private suspend fun prepare(voice: VoiceSettings): TextToSpeech {
+        val name = voice.engine ?: defaultEngine
+        val tts = engine(name)
+        if (applied[name] == voice) return tts
+        val system = voice.voiceId?.let { id -> tts.voices.orEmpty().firstOrNull { it.name == id } }
         when {
             system != null -> {
                 if (system.isNotInstalled) throw NarraException(ErrorKind.VOICE_UNAVAILABLE, system.name)
-                if (engine.setVoice(system) != TextToSpeech.SUCCESS) throw NarraException(ErrorKind.VOICE_UNAVAILABLE, system.name)
+                if (tts.setVoice(system) != TextToSpeech.SUCCESS) throw NarraException(ErrorKind.VOICE_UNAVAILABLE, system.name)
             }
             voice.voiceId != null -> throw NarraException(ErrorKind.VOICE_UNAVAILABLE, voice.voiceId)
             else -> {
                 val locale = voice.languageTag?.let(Locale::forLanguageTag) ?: Locale.getDefault()
-                if (engine.setLanguage(locale) < TextToSpeech.LANG_AVAILABLE) {
+                if (tts.setLanguage(locale) < TextToSpeech.LANG_AVAILABLE) {
                     throw NarraException(ErrorKind.VOICE_UNAVAILABLE, locale.toLanguageTag())
                 }
                 // El idioma puede estar "disponible" aunque su voz no esté descargada todavía.
-                if (engine.voice?.isNotInstalled == true) throw NarraException(ErrorKind.VOICE_UNAVAILABLE, locale.toLanguageTag())
+                if (tts.voice?.isNotInstalled == true) throw NarraException(ErrorKind.VOICE_UNAVAILABLE, locale.toLanguageTag())
             }
         }
-        engine.setSpeechRate(voice.speechRate)
-        engine.setPitch(voice.pitch)
-        applied = voice
+        tts.setSpeechRate(voice.speechRate)
+        tts.setPitch(voice.pitch)
+        applied[name] = voice
+        return tts
     }
 
     private fun failure(code: Int): NarraException = when (code) {
@@ -187,9 +229,11 @@ private class AndroidTtsSession(private val engine: TextToSpeech) : TtsSession {
     private val SystemVoice.isNotInstalled: Boolean
         get() = features.orEmpty().contains(TextToSpeech.Engine.KEY_FEATURE_NOT_INSTALLED)
 
-    private fun SystemVoice.toDomain(locale: Locale, position: Int) = Voice(
+    private fun SystemVoice.toDomain(engine: String, engineLabel: String, locale: Locale, position: Int) = Voice(
         id = name,
         providerId = VoiceSettings.ANDROID_TTS_PROVIDER_ID,
+        engine = engine,
+        engineLabel = engineLabel,
         displayName = "Voz ${position + 1}",
         languageTag = locale.toLanguageTag(),
         languageLabel = locale.getDisplayLanguage(locale).replaceFirstChar { it.titlecase(locale) },
@@ -201,6 +245,8 @@ private class AndroidTtsSession(private val engine: TextToSpeech) : TtsSession {
     )
 
     private companion object {
+        const val INIT_TIMEOUT_MS = 15_000L
+
         /** Un WAV sin muestras ocupa solo su cabecera. */
         const val MIN_WAV_BYTES = 44L
         const val BASE_TIMEOUT_MS = 30_000L

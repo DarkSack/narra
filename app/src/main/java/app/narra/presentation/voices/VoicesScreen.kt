@@ -256,11 +256,11 @@ private fun VoicesContent(state: VoicesUiState, viewModel: VoicesViewModel, onIn
             }
         }
 
-        items(state.visibleVoices, key = { it.id }) { voice ->
+        items(state.visibleVoices, key = { it.key }) { voice ->
             VoiceRow(
                 voice = voice,
-                selected = voice.id == draft.voiceId,
-                previewing = state.previewing && state.previewingVoiceId == voice.id,
+                selected = voice.key == state.draftKey,
+                previewing = state.previewing && state.previewingKey == voice.key,
                 onSelect = { viewModel.select(voice) },
                 onPreview = { viewModel.togglePreview(voice) },
                 onInstall = onInstall,
@@ -288,7 +288,7 @@ private fun CurrentVoice(state: VoicesUiState, onPreview: () -> Unit, modifier: 
                 )
             }
             FilledTonalIconButton(onClick = onPreview) {
-                val playing = state.previewing && state.previewingVoiceId == state.draft.voiceId
+                val playing = state.previewing && state.previewingKey == state.draftKey
                 Icon(
                     if (playing) Icons.Rounded.Stop else Icons.Rounded.PlayArrow,
                     contentDescription = if (playing) "Detener la muestra" else "Escuchar la voz elegida",
@@ -308,6 +308,7 @@ private fun VoiceRow(
     onInstall: () -> Unit,
 ) {
     val tags = buildList {
+        add(voice.engineLabel)
         add(if (voice.requiresNetwork) "Usa internet" else "Sin conexión")
         if (voice.quality >= HIGH_QUALITY) add("Alta calidad")
         if (!voice.isInstalled) add("Sin descargar")

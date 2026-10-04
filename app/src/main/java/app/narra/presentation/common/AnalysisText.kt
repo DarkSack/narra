@@ -34,3 +34,10 @@ private val NUMBERED_TITLE = Regex("""^\s*((cap[ií]tulo|chapter|parte|part|libr
 /** Etiqueta para una lista de capítulos: añade la posición solo si el título no la lleva. */
 fun chapterLabel(number: Int, title: String): String =
     if (NUMBERED_TITLE.containsMatchIn(title)) title else "$number. $title"
+
+/** "Capítulo 3 · El viaje", o solo el título si ya dice qué capítulo es. */
+fun chapterHeading(number: Int, title: String?): String = when {
+    title.isNullOrBlank() -> "Capítulo $number"
+    NUMBERED_TITLE.containsMatchIn(title) -> title
+    else -> "Capítulo $number · $title"
+}

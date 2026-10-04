@@ -17,6 +17,8 @@ enum class AudioFormat(val extension: String, val mimeType: String) {
 
 data class VoiceSettings(
     val providerId: String = ANDROID_TTS_PROVIDER_ID,
+    /** Motor de voz instalado que ofrece la voz (paquete); null = el predeterminado del teléfono. */
+    val engine: String? = null,
     val voiceId: String? = null,
     val languageTag: String? = null,
     val speechRate: Float = 1f,
@@ -38,6 +40,9 @@ enum class VoiceGender { FEMALE, MALE, NEUTRAL, UNKNOWN }
 data class Voice(
     val id: String,
     val providerId: String,
+    /** Motor de voz que la ofrece (paquete) y su nombre visible. */
+    val engine: String,
+    val engineLabel: String,
     val displayName: String,
     val languageTag: String,
     val languageLabel: String,
@@ -47,7 +52,10 @@ data class Voice(
     val quality: Int,
     val requiresNetwork: Boolean,
     val isInstalled: Boolean,
-)
+) {
+    /** Único entre motores: dos motores pueden usar el mismo nombre de voz. */
+    val key: String get() = "$engine/$id"
+}
 
 /** Lo que un proveedor de voz sabe hacer: la UI se adapta en lugar de ocultar funciones. */
 data class TtsCapabilities(

@@ -39,7 +39,8 @@ data class VoicesUiState(
     /** Idioma con el que se filtra la lista; null = todos. */
     val languageFilter: String? = null,
     val draft: VoiceSettings = VoiceSettings(),
-    val previewingVoiceId: String? = null,
+    /** [Voice.key] de la voz que suena en la muestra. */
+    val previewingKey: String? = null,
     val previewing: Boolean = false,
     /** Hay cambios sin guardar. */
     val dirty: Boolean = false,
@@ -50,7 +51,10 @@ data class VoicesUiState(
     val visibleVoices: List<Voice>
         get() = languageFilter?.let { language -> voices.filter { Locale.forLanguageTag(it.languageTag).language == language } } ?: voices
 
-    val selectedVoice: Voice? get() = voices.firstOrNull { it.id == draft.voiceId }
+    val selectedVoice: Voice? get() = voices.firstOrNull { it.id == draft.voiceId && (draft.engine == null || it.engine == draft.engine) }
+
+    /** Clave de la voz elegida, comparable con [Voice.key]. */
+    val draftKey: String get() = selectedVoice?.key ?: "${draft.engine}/${draft.voiceId}"
 
     /** El libro ya tiene audio: cambiar la voz plantea si regenerarlo. */
     val hasAudio: Boolean get() = (book?.segmentsAvailable ?: 0) > 0
@@ -137,7 +141,12 @@ class VoicesViewModel @Inject constructor(
     fun setLanguageFilter(language: String?) = _state.update { it.copy(languageFilter = language) }
 
     fun select(voice: Voice) {
-        _state.update { it.copy(draft = it.draft.copy(voiceId = voice.id, languageTag = voice.languageTag, providerId = voice.providerId), dirty = true) }
+        _state.update {
+            it.copy(
+                draft = it.draft.copy(providerId = voice.providerId, engine = voice.engine, voiceId = voice.id, languageTag = voice.languageTag),
+                dirty = true,
+            )
+        }
         startPreview(voice)
     }
 
@@ -151,26 +160,30 @@ class VoicesViewModel @Inject constructor(
     /** Dice la muestra con la voz indicada (o la elegida, con null). Si ya suena, la detiene. */
     fun togglePreview(voice: Voice? = null) {
         val current = _state.value
-        if (current.previewing && current.previewingVoiceId == (voice?.id ?: current.draft.voiceId)) stopPreview() else startPreview(voice)
+        if (current.previewing && current.previewingKey == (voice?.key ?: current.draftKey)) stopPreview() else startPreview(voice)
     }
 
     private fun startPreview(voice: Voice?) {
         val current = _state.value
-        val target = voice?.id ?: current.draft.voiceId
+        val target = voice?.key ?: current.draftKey
         val active = session ?: return
         previewJob?.cancel()
         active.stop()
-        val settings = current.draft.copy(voiceId = target, languageTag = voice?.languageTag ?: current.draft.languageTag)
+        val settings = if (voice == null) {
+            current.draft
+        } else {
+            current.draft.copy(engine = voice.engine, voiceId = voice.id, languageTag = voice.languageTag)
+        }
         val token = ++previewToken
         previewJob = viewModelScope.launch {
-            _state.update { it.copy(previewing = true, previewingVoiceId = target) }
+            _state.update { it.copy(previewing = true, previewingKey = target) }
             try {
                 active.speak(sample, settings)
             } catch (e: NarraException) {
                 _events.send(VoicesEvent.Message(previewError(e.kind)))
             } finally {
                 // Una muestra interrumpida por otra no debe borrar el estado de la nueva.
-                if (token == previewToken) _state.update { it.copy(previewing = false, previewingVoiceId = null) }
+                if (token == previewToken) _state.update { it.copy(previewing = false, previewingKey = null) }
             }
         }
     }
@@ -178,7 +191,7 @@ class VoicesViewModel @Inject constructor(
     fun stopPreview() {
         previewJob?.cancel()
         session?.stop()
-        _state.update { it.copy(previewing = false, previewingVoiceId = null) }
+        _state.update { it.copy(previewing = false, previewingKey = null) }
     }
 
     /** Guarda la voz. Con [regenerate], borra el audio creado y lo vuelve a crear con la nueva voz. */

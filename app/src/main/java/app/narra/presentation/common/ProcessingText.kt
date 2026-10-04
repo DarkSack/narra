@@ -4,6 +4,7 @@ import app.narra.core.ui.plural
 import app.narra.domain.model.Book
 import app.narra.domain.model.BookState
 import app.narra.domain.model.Chapter
+import app.narra.domain.model.ChapterState
 import app.narra.domain.model.JobState
 import app.narra.domain.model.ProcessingJob
 import app.narra.presentation.components.ProcessingSummary
@@ -46,8 +47,12 @@ fun summarizeProcessing(book: Book, chapters: List<Chapter>, job: ProcessingJob?
             isPaused = false,
         )
         else -> {
-            val current = included.firstOrNull { it.id == job?.currentChapterId }
-                ?: included.firstOrNull { it.segmentsAvailable < it.segmentCount }
+            // El cursor del trabajo apunta al último segmento terminado: el capítulo en curso es
+            // el que se está generando o, si aún no empezó, el siguiente con partes pendientes.
+            val pending = { chapter: Chapter -> chapter.segmentsAvailable < chapter.segmentCount }
+            val current = included.firstOrNull { it.state == ChapterState.PROCESSING && pending(it) }
+                ?: included.firstOrNull { it.id == job?.priorityChapterId && pending(it) }
+                ?: included.firstOrNull(pending)
             val number = current?.let { included.indexOf(it) + 1 }
             val paused = book.state == BookState.PAUSED
             // Otro libro está ocupando el motor de voz: este espera su turno.

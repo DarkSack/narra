@@ -95,6 +95,7 @@ class BookRepositoryImpl @Inject constructor(
         books.update(
             current.copy(
                 voiceProviderId = voice.providerId,
+                voiceEngine = voice.engine,
                 voiceId = voice.voiceId,
                 voiceLanguage = voice.languageTag,
                 speechRate = voice.speechRate,

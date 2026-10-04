@@ -46,6 +46,7 @@ data class BookEntity(
     val analysisJson: String? = null,
     // Voz y audio
     val voiceProviderId: String,
+    val voiceEngine: String? = null,
     val voiceId: String? = null,
     val voiceLanguage: String? = null,
     val speechRate: Float = 1f,

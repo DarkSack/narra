@@ -1,5 +1,6 @@
 package app.narra.data.db
 
+import androidx.room.AutoMigration
 import androidx.room.Database
 import androidx.room.RoomDatabase
 
@@ -12,8 +13,12 @@ import androidx.room.RoomDatabase
         PlaybackProgressEntity::class,
         ProcessingJobEntity::class,
     ],
-    version = 1,
+    version = 2,
     exportSchema = true,
+    autoMigrations = [
+        // 2: motor de voz de cada libro (books.voiceEngine).
+        AutoMigration(from = 1, to = 2),
+    ],
 )
 abstract class NarraDatabase : RoomDatabase() {
     abstract fun bookDao(): BookDao
