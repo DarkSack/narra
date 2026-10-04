@@ -21,6 +21,7 @@ import androidx.media3.session.SessionCommand
 import androidx.media3.session.SessionResult
 import app.narra.MainActivity
 import app.narra.R
+import app.narra.di.ApplicationScope
 import app.narra.domain.model.AppSettings
 import app.narra.domain.model.Book
 import app.narra.domain.model.BookState
@@ -30,7 +31,6 @@ import app.narra.domain.model.PlayableTrack
 import app.narra.domain.repository.BookRepository
 import app.narra.domain.repository.PlaybackRepository
 import app.narra.domain.repository.SettingsRepository
-import app.narra.di.ApplicationScope
 import com.google.common.util.concurrent.ListenableFuture
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.CoroutineScope
@@ -104,7 +104,11 @@ class PlaybackService : MediaSessionService() {
             .setMediaButtonPreferences(mediaButtons(settings.value))
             .build()
         setMediaNotificationProvider(
-            DefaultMediaNotificationProvider.Builder(this).build().apply { setSmallIcon(R.drawable.ic_notification) },
+            DefaultMediaNotificationProvider.Builder(this)
+                .setChannelId(PLAYBACK_CHANNEL_ID)
+                .setChannelName(R.string.playback_channel_name)
+                .build()
+                .apply { setSmallIcon(R.drawable.ic_notification) },
         )
 
         // Los botones de salto reflejan los segundos elegidos en Ajustes.
@@ -437,6 +441,9 @@ class PlaybackService : MediaSessionService() {
     companion object {
         private const val MS_PER_SECOND = 1_000L
         private const val PROGRESS_SAVE_INTERVAL_MS = 10_000L
+
+        /** Canal propio, con nombre en español; sustituye al genérico de Media3. */
+        const val PLAYBACK_CHANNEL_ID = "playback"
     }
 }
 

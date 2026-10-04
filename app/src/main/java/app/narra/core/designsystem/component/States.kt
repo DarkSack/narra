@@ -6,6 +6,7 @@ import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -19,7 +20,11 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.ErrorOutline
+import androidx.compose.material.icons.rounded.Info
 import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
@@ -104,29 +109,54 @@ fun ErrorState(
     modifier: Modifier = Modifier,
     onAction: (() -> Unit)? = null,
     onDismiss: (() -> Unit)? = null,
+    /** Un aviso que propone algo (como reconocer un escaneo) no se pinta como un fallo. */
+    notice: Boolean = false,
 ) {
+    val colors = MaterialTheme.colorScheme
+    val container = if (notice) colors.surfaceContainerHigh else colors.errorContainer
+    val content = if (notice) colors.onSurface else colors.onErrorContainer
     Surface(
-        color = MaterialTheme.colorScheme.errorContainer,
-        contentColor = MaterialTheme.colorScheme.onErrorContainer,
+        color = container,
+        contentColor = content,
         shape = RoundedCornerShape(NarraTheme.tokens.cardRadius),
         modifier = modifier.fillMaxWidth(),
     ) {
-        Column(Modifier.padding(16.dp)) {
-            Text(error.title, style = MaterialTheme.typography.titleMedium)
-            Spacer(Modifier.height(4.dp))
-            Text(error.explanation, style = MaterialTheme.typography.bodyMedium)
-            if ((error.actionLabel != null && onAction != null) || onDismiss != null) {
-                Spacer(Modifier.height(8.dp))
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    if (error.actionLabel != null && onAction != null) {
-                        OutlinedButton(onClick = onAction) { Text(error.actionLabel) }
+        Row(Modifier.padding(16.dp), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+            // El icono repite lo que dice el color, para quien no distingue el rojo.
+            Icon(
+                if (notice) Icons.Rounded.Info else Icons.Rounded.ErrorOutline,
+                contentDescription = null,
+                tint = if (notice) colors.primary else content,
+            )
+            Column(Modifier.weight(1f)) {
+                Text(error.title, style = MaterialTheme.typography.titleMedium, modifier = Modifier.semantics { heading() })
+                Spacer(Modifier.height(4.dp))
+                Text(error.explanation, style = MaterialTheme.typography.bodyMedium)
+                if ((error.actionLabel != null && onAction != null) || onDismiss != null) {
+                    Spacer(Modifier.height(12.dp))
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        if (error.actionLabel != null && onAction != null) {
+                            if (notice) {
+                                Button(onClick = onAction) { Text(error.actionLabel) }
+                            } else {
+                                OutlinedButton(
+                                    onClick = onAction,
+                                    colors = ButtonDefaults.outlinedButtonColors(contentColor = content),
+                                    border = BorderStroke(1.dp, content.copy(alpha = OUTLINE_ALPHA)),
+                                ) { Text(error.actionLabel) }
+                            }
+                        }
+                        if (onDismiss != null) {
+                            TextButton(onClick = onDismiss, colors = ButtonDefaults.textButtonColors(contentColor = content)) { Text("Cerrar") }
+                        }
                     }
-                    if (onDismiss != null) TextButton(onClick = onDismiss) { Text("Cerrar") }
                 }
             }
         }
     }
 }
+
+private const val OUTLINE_ALPHA = 0.6f
 
 /** Bloque gris con brillo que recorre, para esqueletos de carga. */
 @Composable

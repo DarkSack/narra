@@ -24,7 +24,7 @@ internal object NarraPalette {
     val Lamp10 = Color(0xFF2C1800)
     val Lamp20 = Color(0xFF452B00)
     val Lamp30 = Color(0xFF633F00)
-    val Lamp40 = Color(0xFF8F5800)
+    val Lamp40 = Color(0xFF8A5500)
     val Lamp80 = Color(0xFFF2B45A)
     val Lamp90 = Color(0xFFFFDDB0)
 
@@ -32,7 +32,7 @@ internal object NarraPalette {
     val Sage10 = Color(0xFF002117)
     val Sage20 = Color(0xFF00382A)
     val Sage30 = Color(0xFF1F5140)
-    val Sage40 = Color(0xFF3F7A63)
+    val Sage40 = Color(0xFF356854)
     val Sage80 = Color(0xFF8FD1B5)
     val Sage90 = Color(0xFFC2EFD9)
 

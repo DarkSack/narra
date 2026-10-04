@@ -43,6 +43,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextOverflow
@@ -306,7 +307,11 @@ private fun ReviewSection(books: List<Book>, onReview: (String) -> Unit) {
         SectionHeader("Listos para revisar", subtitle = "Confirma capítulos y voz para crear el audiolibro.")
         books.forEach { book ->
             BookListItem(book, onClick = { onReview(book.id) }) {
-                FilledTonalButton(onClick = { onReview(book.id) }) { Text("Revisar") }
+                // Con varios libros, «Revisar» a secas no dice a cuál se refiere.
+                FilledTonalButton(
+                    onClick = { onReview(book.id) },
+                    modifier = Modifier.semantics { contentDescription = "Revisar ${book.title}" },
+                ) { Text("Revisar") }
             }
         }
     }

@@ -317,7 +317,7 @@ fun ChapterRow(
                 overflow = TextOverflow.Ellipsis,
             )
             Row(verticalAlignment = Alignment.CenterVertically) {
-                ChapterStateIcon(chapter.state, size = 14.dp)
+                ChapterStateIcon(chapter.state, size = 14.dp, decorative = true)
                 Spacer(Modifier.width(6.dp))
                 Text(
                     listOfNotNull(

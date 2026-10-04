@@ -26,8 +26,8 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.contentDescription
-import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
@@ -71,7 +71,9 @@ fun CoverImage(
                 },
             )
             .clip(shape)
-            .semantics { if (contentDescription != null) this.contentDescription = contentDescription },
+            // El título dibujado en la portada generada es decoración: la portada se describe entera
+            // con [contentDescription], o nada si el texto de al lado ya dice de qué libro se trata.
+            .clearAndSetSemantics { if (contentDescription != null) this.contentDescription = contentDescription },
     ) {
         GeneratedCover(title = title, author = author)
         if (coverPath != null) {
@@ -125,7 +127,8 @@ private fun GeneratedCover(title: String, author: String?) {
                     Text(
                         text = author.uppercase(),
                         style = CoverTitleStyle.copy(fontSize = authorSize),
-                        color = Color.White.copy(alpha = 0.82f),
+                        // Blanco pleno: es letra pequeña sobre un degradado y necesita todo el contraste.
+                        color = Color.White,
                         maxLines = 2,
                         overflow = TextOverflow.Ellipsis,
                         modifier = Modifier.align(Alignment.Start),

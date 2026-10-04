@@ -1,12 +1,19 @@
 package app.narra.core.designsystem.component
 
+import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.scaleIn
+import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
@@ -74,9 +81,33 @@ fun NarraProgressBar(
     }
 }
 
-/** Icono del estado de un capítulo: ✓ disponible, ⟳ procesando, ○ pendiente, ⚠ error. */
+/**
+ * Icono del estado de un capítulo: ✓ disponible, ⟳ procesando, ○ pendiente, ⚠ error. Al pasar
+ * a disponible, el ✓ aparece con un pequeño rebote: es la confirmación de que ya se puede escuchar.
+ * Con [decorative], el estado ya lo dice el texto de al lado y el icono no se anuncia.
+ */
 @Composable
-fun ChapterStateIcon(state: ChapterState, modifier: Modifier = Modifier, size: Dp = 20.dp) {
+fun ChapterStateIcon(state: ChapterState, modifier: Modifier = Modifier, size: Dp = 20.dp, decorative: Boolean = false) {
+    if (NarraTheme.reduceMotion) {
+        StateIcon(state, modifier, size, decorative)
+        return
+    }
+    AnimatedContent(
+        targetState = state,
+        transitionSpec = {
+            if (targetState == ChapterState.AVAILABLE) {
+                (scaleIn(spring(dampingRatio = Spring.DampingRatioMediumBouncy), initialScale = POP_INITIAL_SCALE) + fadeIn()) togetherWith fadeOut()
+            } else {
+                fadeIn() togetherWith fadeOut()
+            }
+        },
+        contentAlignment = Alignment.Center,
+        label = "estado",
+    ) { current -> StateIcon(current, modifier, size, decorative) }
+}
+
+@Composable
+private fun StateIcon(state: ChapterState, modifier: Modifier, size: Dp, decorative: Boolean) {
     val colors = NarraTheme.colors
     val (icon, tint, label) = when (state) {
         ChapterState.AVAILABLE -> Triple(Icons.Rounded.CheckCircle, colors.available, "Disponible")
@@ -85,10 +116,11 @@ fun ChapterStateIcon(state: ChapterState, modifier: Modifier = Modifier, size: D
         ChapterState.ERROR -> Triple(Icons.Rounded.ErrorOutline, colors.attention, "Error")
         ChapterState.SKIPPED -> Triple(Icons.Rounded.RemoveCircleOutline, colors.pending, "Omitido")
     }
+    val description = label.takeUnless { decorative }
     if (state == ChapterState.PROCESSING) {
-        SpinningIcon(icon, label, tint, modifier.size(size))
+        SpinningIcon(icon, description, tint, modifier.size(size))
     } else {
-        Icon(icon, contentDescription = label, tint = tint, modifier = modifier.size(size))
+        Icon(icon, contentDescription = description, tint = tint, modifier = modifier.size(size))
     }
 }
 
@@ -108,6 +140,9 @@ fun SpinningIcon(icon: ImageVector, contentDescription: String?, tint: Color, mo
     )
     Icon(icon, contentDescription, tint = tint, modifier = modifier.rotate(angle))
 }
+
+/** Tamaño desde el que crece el ✓ al terminar un capítulo. */
+private const val POP_INITIAL_SCALE = 0.4f
 
 enum class StatusTone { NEUTRAL, AVAILABLE, PROCESSING, ATTENTION }
 

@@ -38,7 +38,7 @@ se genera el 2*. Coste: espacio. AAC mono a 48 kbps ≈ 21 MB por hora de audio 
 |---|---|---|
 | Primario «tinta» | `#4B45C6` | `#C4C1FF` |
 | Acento «lámpara» | `#C77A12` | `#F2B45A` |
-| Disponible «salvia» | `#3F7A63` | `#8FD1B5` |
+| Disponible «salvia» | `#356854` | `#8FD1B5` |
 | Error | `#C2363B` | `#FF9E9A` |
 | Fondo | `#FBF8F2` (papel) | `#111016` (noche) |
 | Superficies | papel cálido escalonado | 5 niveles: `#17161D` → `#2D2B36` |
@@ -46,6 +46,11 @@ se genera el 2*. Coste: espacio. AAC mono a 48 kbps ≈ 21 MB por hora de audio 
 El tema oscuro no invierte colores: las superficies suben de luminosidad con la elevación, el
 texto primario es `#ECEAF2` (no blanco puro), los acentos bajan de saturación y las portadas
 reciben un velo para no deslumbrar.
+
+Los colores de la tabla que se usan como texto (tinta, lámpara en claro `#8A5500`, salvia, error)
+cumplen un contraste mínimo de 4,5:1 sobre todas las superficies del tema. Las pantallas
+principales se auditan con el Accessibility Test Framework de Google
+(`AccessibilityAuditTest` y `OnboardingAccessibilityTest`).
 
 ### Dos estilos de interfaz (mismo estado, distinta composición)
 

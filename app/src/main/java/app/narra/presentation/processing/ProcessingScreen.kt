@@ -308,7 +308,7 @@ private fun ChapterProgressRow(chapter: Chapter, number: Int, isCurrent: Boolean
             .padding(horizontal = tokens.screenPadding, vertical = 10.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        ChapterStateIcon(chapter.state, size = 20.dp)
+        ChapterStateIcon(chapter.state, size = 20.dp, decorative = true)
         Spacer(Modifier.width(14.dp))
         Column(Modifier.weight(1f)) {
             Text(

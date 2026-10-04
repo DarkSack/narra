@@ -322,11 +322,14 @@ private fun ErrorContent(book: Book, onRetry: () -> Unit, onRunOcr: () -> Unit, 
                 RecoveryAction.CHOOSE_ANOTHER_FILE, RecoveryAction.DELETE -> onDiscard
                 else -> null
             }
-            ErrorState(error, onAction = action)
+            ErrorState(error, onAction = action, notice = error.action == RecoveryAction.RUN_OCR)
         }
         Spacer(Modifier.height(16.dp))
         Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-            OutlinedButton(onClick = onRetry) { Text("Analizar de nuevo") }
+            // Si la tarjeta ya ofrece reintentar o reconocer el texto, repetirlo aquí confunde.
+            if (error?.action != RecoveryAction.RETRY && error?.action != RecoveryAction.RUN_OCR) {
+                OutlinedButton(onClick = onRetry) { Text("Analizar de nuevo") }
+            }
             TextButton(onClick = onDiscard) { Text("Descartar") }
         }
     }

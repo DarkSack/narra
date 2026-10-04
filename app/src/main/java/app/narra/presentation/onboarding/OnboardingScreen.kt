@@ -81,58 +81,56 @@ fun OnboardingScreen(onFinish: (importNow: Boolean) -> Unit) {
     val scope = rememberCoroutineScope()
     val isLast = pager.currentPage == PAGE_COUNT - 1
 
-    Column(
-        Modifier
-            .fillMaxSize()
-            .background(MaterialTheme.colorScheme.background)
-            .windowInsetsPadding(WindowInsets.safeDrawing),
-    ) {
-        Row(Modifier.fillMaxWidth().padding(horizontal = 8.dp).heightIn(min = 48.dp), verticalAlignment = Alignment.CenterVertically) {
-            Spacer(Modifier.weight(1f))
-            if (!isLast) TextButton(onClick = { onFinish(false) }) { Text("Saltar") }
-        }
-        HorizontalPager(state = pager, modifier = Modifier.weight(1f)) { page ->
-            Column(
-                Modifier
-                    .fillMaxSize()
-                    .verticalScroll(rememberScrollState())
-                    .padding(horizontal = NarraTheme.tokens.screenPadding),
-                horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.Center,
-            ) {
-                Column(Modifier.widthIn(max = MAX_CONTENT_WIDTH), horizontalAlignment = Alignment.CenterHorizontally) {
-                    when (page) {
-                        0 -> WhatItDoes()
-                        1 -> ListenWhileCreating()
-                        else -> WhatItNeeds()
+    // Surface y no un fondo pintado: fija también el color del texto para el tema activo.
+    Surface(color = MaterialTheme.colorScheme.background, modifier = Modifier.fillMaxSize()) {
+        Column(Modifier.fillMaxSize().windowInsetsPadding(WindowInsets.safeDrawing)) {
+            Row(Modifier.fillMaxWidth().padding(horizontal = 8.dp).heightIn(min = 48.dp), verticalAlignment = Alignment.CenterVertically) {
+                Spacer(Modifier.weight(1f))
+                if (!isLast) TextButton(onClick = { onFinish(false) }) { Text("Saltar") }
+            }
+            HorizontalPager(state = pager, modifier = Modifier.weight(1f)) { page ->
+                Column(
+                    Modifier
+                        .fillMaxSize()
+                        .verticalScroll(rememberScrollState())
+                        .padding(horizontal = NarraTheme.tokens.screenPadding),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.Center,
+                ) {
+                    Column(Modifier.widthIn(max = MAX_CONTENT_WIDTH), horizontalAlignment = Alignment.CenterHorizontally) {
+                        when (page) {
+                            0 -> WhatItDoes()
+                            1 -> ListenWhileCreating()
+                            else -> WhatItNeeds()
+                        }
                     }
                 }
             }
-        }
-        PageDots(pager.currentPage, Modifier.align(Alignment.CenterHorizontally).padding(vertical = 16.dp))
-        Column(
-            Modifier.fillMaxWidth().padding(horizontal = NarraTheme.tokens.screenPadding).padding(bottom = 16.dp),
-            horizontalAlignment = Alignment.CenterHorizontally,
-        ) {
-            val fade = narraTween<Float>()
-            AnimatedContent(isLast, transitionSpec = { fadeIn(fade) togetherWith fadeOut(fade) }, label = "acciones") { last ->
-                Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.widthIn(max = MAX_CONTENT_WIDTH)) {
-                    if (last) {
-                        Button(onClick = { onFinish(true) }, modifier = Modifier.fillMaxWidth().heightIn(min = BUTTON_HEIGHT)) {
-                            Text("Importar tu primer libro")
+            PageDots(pager.currentPage, Modifier.align(Alignment.CenterHorizontally).padding(vertical = 16.dp))
+            Column(
+                Modifier.fillMaxWidth().padding(horizontal = NarraTheme.tokens.screenPadding).padding(bottom = 16.dp),
+                horizontalAlignment = Alignment.CenterHorizontally,
+            ) {
+                val fade = narraTween<Float>()
+                AnimatedContent(isLast, transitionSpec = { fadeIn(fade) togetherWith fadeOut(fade) }, label = "acciones") { last ->
+                    Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.widthIn(max = MAX_CONTENT_WIDTH)) {
+                        if (last) {
+                            Button(onClick = { onFinish(true) }, modifier = Modifier.fillMaxWidth().heightIn(min = BUTTON_HEIGHT)) {
+                                Text("Importar tu primer libro")
+                            }
+                            TextButton(onClick = { onFinish(false) }) { Text("Explorar primero") }
+                        } else {
+                            Button(
+                                onClick = { scope.launch { pager.animateScrollToPage(pager.currentPage + 1) } },
+                                modifier = Modifier.fillMaxWidth().heightIn(min = BUTTON_HEIGHT),
+                            ) {
+                                Text("Siguiente")
+                                Spacer(Modifier.width(8.dp))
+                                Icon(Icons.AutoMirrored.Rounded.ArrowForward, contentDescription = null, modifier = Modifier.size(18.dp))
+                            }
+                            // Ocupa lo mismo que «Explorar primero» para que el botón no salte al llegar al final.
+                            Spacer(Modifier.height(SECONDARY_ACTION_HEIGHT))
                         }
-                        TextButton(onClick = { onFinish(false) }) { Text("Explorar primero") }
-                    } else {
-                        Button(
-                            onClick = { scope.launch { pager.animateScrollToPage(pager.currentPage + 1) } },
-                            modifier = Modifier.fillMaxWidth().heightIn(min = BUTTON_HEIGHT),
-                        ) {
-                            Text("Siguiente")
-                            Spacer(Modifier.width(8.dp))
-                            Icon(Icons.AutoMirrored.Rounded.ArrowForward, contentDescription = null, modifier = Modifier.size(18.dp))
-                        }
-                        // Ocupa lo mismo que «Explorar primero» para que el botón no salte al llegar al final.
-                        Spacer(Modifier.height(SECONDARY_ACTION_HEIGHT))
                     }
                 }
             }

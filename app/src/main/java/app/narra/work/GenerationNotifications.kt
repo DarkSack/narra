@@ -28,6 +28,8 @@ class GenerationNotifications @Inject constructor(@ApplicationContext private va
     private val manager = NotificationManagerCompat.from(context)
 
     fun createChannels() {
+        // Versiones anteriores usaban el canal genérico de Media3 («Now playing»).
+        manager.deleteNotificationChannel(LEGACY_PLAYBACK_CHANNEL)
         manager.createNotificationChannelsCompat(
             listOf(
                 NotificationChannelCompat.Builder(CHANNEL_PROGRESS, NotificationManagerCompat.IMPORTANCE_LOW)
@@ -203,5 +205,8 @@ class GenerationNotifications @Inject constructor(@ApplicationContext private va
         const val NOTIFICATION_EXPORT_PROGRESS = 2004
         const val NOTIFICATION_EXPORT_RESULT = 2005
         const val NO_FOREGROUND_TYPE = 0
+
+        /** Id del canal que crea Media3 si no se le da uno (DefaultMediaNotificationProvider). */
+        const val LEGACY_PLAYBACK_CHANNEL = "default_channel_id"
     }
 }

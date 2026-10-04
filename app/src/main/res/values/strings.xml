@@ -1,4 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">Narra</string>
+    <!-- Canal de la notificación de reproducción (Ajustes del sistema > Notificaciones). -->
+    <string name="playback_channel_name">Reproducción</string>
 </resources>
