@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Icono de notificación: el libro con ondas de Narra en blanco plano. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <group
+        android:pivotX="54"
+        android:pivotY="54"
+        android:scaleX="1.55"
+        android:scaleY="1.55"
+        android:translateY="-1">
+        <path
+            android:fillColor="#FFFFFF"
+            android:pathData="M53,50C47,45.5 39.5,44.2 31,45.2L31,72.4C39.5,71.6 47,73 53,77Z M55,50C61,45.5 68.5,44.2 77,45.2L77,72.4C68.5,71.6 61,73 55,77Z" />
+        <path
+            android:strokeColor="#FFFFFF"
+            android:strokeWidth="4"
+            android:strokeLineCap="round"
+            android:pathData="M46.5,40.5Q54,34.5 61.5,40.5 M41,33.5Q54,24 67,33.5" />
+    </group>
+</vector>

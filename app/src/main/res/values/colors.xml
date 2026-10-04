@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Solo lo que necesita el sistema antes de que arranque Compose (splash, icono, ventana). -->
+    <color name="narra_ink">#4B45C6</color>
+    <color name="narra_lamp">#F2B544</color>
+    <color name="narra_paper">#FBF8F2</color>
+    <color name="narra_night">#111016</color>
+    <color name="ic_launcher_background">#4B45C6</color>
+</resources>

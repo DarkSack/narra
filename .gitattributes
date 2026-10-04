@@ -1,0 +1,7 @@
+# Finales de línea estables entre Windows y Unix.
+* text=auto eol=lf
+*.bat text eol=crlf
+*.jar binary
+*.png binary
+*.jpg binary
+*.webp binary

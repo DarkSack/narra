@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Libro abierto del que salen ondas de voz. Dibujado dentro de la zona segura (66 dp) del icono adaptable. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <path
+        android:fillColor="@color/narra_paper"
+        android:pathData="M53,50C47,45.5 39.5,44.2 31,45.2L31,72.4C39.5,71.6 47,73 53,77Z" />
+    <path
+        android:fillColor="@color/narra_paper"
+        android:fillAlpha="0.86"
+        android:pathData="M55,50C61,45.5 68.5,44.2 77,45.2L77,72.4C68.5,71.6 61,73 55,77Z" />
+    <path
+        android:strokeColor="@color/narra_lamp"
+        android:strokeWidth="3.2"
+        android:strokeLineCap="round"
+        android:pathData="M46.5,40.5Q54,34.5 61.5,40.5" />
+    <path
+        android:strokeColor="@color/narra_lamp"
+        android:strokeWidth="3.2"
+        android:strokeLineCap="round"
+        android:strokeAlpha="0.7"
+        android:pathData="M41,33.5Q54,24 67,33.5" />
+</vector>
