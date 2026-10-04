@@ -28,6 +28,15 @@ Requiere JDK 17 y el SDK de Android (compileSdk 36).
 ./gradlew :app:assembleDebug
 ```
 
+Para publicar, genera un App Bundle en lugar de un APK:
+
+```bash
+./gradlew :app:bundleRelease
+```
+
+El reconocimiento de texto de ML Kit incluye una librería nativa de unos 11 MB por arquitectura.
+Un APK universal las lleva todas (≈ 49 MB); con el App Bundle, cada teléfono descarga solo la suya.
+
 Pruebas:
 
 ```bash
