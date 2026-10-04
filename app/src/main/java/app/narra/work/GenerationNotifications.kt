@@ -69,6 +69,22 @@ class GenerationNotifications @Inject constructor(@ApplicationContext private va
         return ForegroundInfo(NOTIFICATION_PROGRESS, builder.build(), foregroundType())
     }
 
+    /** Notificación en primer plano mientras se reconoce el texto de un libro escaneado. */
+    fun recognitionInfo(bookId: String, title: String, done: Int, total: Int): ForegroundInfo {
+        val builder = NotificationCompat.Builder(context, CHANNEL_PROGRESS)
+            .setSmallIcon(R.drawable.ic_notification)
+            .setOngoing(true)
+            .setOnlyAlertOnce(true)
+            .setSilent(true)
+            .setCategory(NotificationCompat.CATEGORY_PROGRESS)
+            .setForegroundServiceBehavior(NotificationCompat.FOREGROUND_SERVICE_IMMEDIATE)
+            .setContentTitle(if (title.isBlank()) "Reconociendo el texto" else "Reconociendo el texto de «$title»")
+            .setProgress(total, done, total == 0)
+        if (total > 0) builder.setContentText("$done de $total páginas")
+        if (bookId.isNotEmpty()) builder.setContentIntent(openBook(bookId))
+        return ForegroundInfo(NOTIFICATION_RECOGNITION, builder.build(), foregroundType())
+    }
+
     fun finished(event: GenerationEvent.Finished) = post(
         event.bookId,
         NotificationCompat.Builder(context, CHANNEL_RESULTS)
@@ -138,6 +154,7 @@ class GenerationNotifications @Inject constructor(@ApplicationContext private va
         const val CHANNEL_RESULTS = "generation-results"
         const val NOTIFICATION_PROGRESS = 2001
         const val NOTIFICATION_RESULT = 2002
+        const val NOTIFICATION_RECOGNITION = 2003
         const val NO_FOREGROUND_TYPE = 0
     }
 }

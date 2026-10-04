@@ -25,6 +25,7 @@ fun AnalysisReport.highlights(): List<String> = buildList {
     if (tables > 0) add("${plural(tables, "tabla", "tablas")} se leerán fila por fila")
     if (lists > 0) add("${plural(lists, "elemento de lista", "elementos de lista")}")
     if (references > 0) add("${plural(references, "sección", "secciones")} de referencia (índice, bibliografía) sin incluir")
+    if (ocrPages > 0) add("Reconocimos el texto de ${plural(ocrPages, "página escaneada", "páginas escaneadas")}")
     if (scannedPages > 0) add("${plural(scannedPages, "página parece escaneada", "páginas parecen escaneadas")}: no tienen texto que leer")
 }
 

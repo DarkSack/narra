@@ -197,7 +197,7 @@ fun ImportScreen(
                 Phase.LOADING, Phase.GONE -> Box(Modifier.fillMaxSize())
                 Phase.ANALYZING -> book?.let { AnalyzingContent(it) }
                 Phase.ERROR -> book?.let {
-                    ErrorContent(it, onRetry = viewModel::retry, onDiscard = { confirmDelete = true })
+                    ErrorContent(it, onRetry = viewModel::retry, onRunOcr = viewModel::runOcr, onDiscard = { confirmDelete = true })
                 }
                 Phase.READY -> book?.let { ReadyContent(state, it, viewModel, onReadChapter) }
             }
@@ -239,14 +239,21 @@ private fun AnalyzingContent(book: Book) {
         ).value
     }
     val analysis = book.analysis
-    val steps = listOf(
+    val recognizing = book.state == BookState.OCR
+    val steps = listOfNotNull(
         Step("PDF copiado en tu teléfono", done = true, active = false),
         Step(
             if (analysis.pagesTotal > 0) "Leyendo páginas · ${analysis.pagesDone} de ${analysis.pagesTotal}" else "Abriendo el PDF",
-            done = book.state == BookState.PARSING,
+            done = recognizing || book.state == BookState.PARSING,
             active = book.state == BookState.IDLE || book.state == BookState.ANALYZING,
             progress = analysis.fraction.takeIf { analysis.pagesTotal > 0 && book.state == BookState.ANALYZING },
         ),
+        Step(
+            "Reconociendo páginas escaneadas · ${analysis.ocrPagesDone} de ${analysis.ocrPagesTotal}",
+            done = book.state == BookState.PARSING,
+            active = recognizing,
+            progress = analysis.ocrFraction.takeIf { recognizing },
+        ).takeIf { recognizing || analysis.ocrPagesTotal > 0 },
         Step("Buscando capítulos y limpiando el texto", done = false, active = book.state == BookState.PARSING),
     )
     Column(
@@ -302,7 +309,7 @@ private fun StepRow(step: Step) {
 // ---------------------------------------------------------------------- Error
 
 @Composable
-private fun ErrorContent(book: Book, onRetry: () -> Unit, onDiscard: () -> Unit) {
+private fun ErrorContent(book: Book, onRetry: () -> Unit, onRunOcr: () -> Unit, onDiscard: () -> Unit) {
     val error = (book.error?.kind)?.toErrorText()
     Column(Modifier.fillMaxSize().padding(NarraTheme.tokens.screenPadding), horizontalAlignment = Alignment.CenterHorizontally) {
         CoverImage(book.title, book.author, book.coverPath, width = NarraTheme.tokens.heroCoverWidth * 0.7f, elevated = false)
@@ -311,6 +318,7 @@ private fun ErrorContent(book: Book, onRetry: () -> Unit, onDiscard: () -> Unit)
             // Solo se ofrecen las acciones que ya se pueden ejecutar desde aquí.
             val action: (() -> Unit)? = when (error.action) {
                 RecoveryAction.RETRY -> onRetry
+                RecoveryAction.RUN_OCR -> onRunOcr
                 RecoveryAction.CHOOSE_ANOTHER_FILE, RecoveryAction.DELETE -> onDiscard
                 else -> null
             }
@@ -331,8 +339,18 @@ private fun ReadyContent(state: ImportUiState, book: Book, viewModel: ImportView
     val tokens = NarraTheme.tokens
     var editing by rememberSaveable { mutableStateOf(false) }
     var renaming by remember { mutableStateOf<Chapter?>(null) }
+    var confirmOcr by remember { mutableStateOf(false) }
     val coverPicker = rememberLauncherForActivityResult(ActivityResultContracts.PickVisualMedia()) { uri ->
         if (uri != null) viewModel.setCover(uri)
+    }
+    if (confirmOcr) {
+        AlertDialog(
+            onDismissRequest = { confirmOcr = false },
+            title = { Text("¿Reconocer el texto escaneado?") },
+            text = { Text("Leeremos esas páginas como imágenes, en tu teléfono. Después volveremos a buscar los capítulos, así que se perderán los cambios que hayas hecho en ellos.") },
+            confirmButton = { TextButton(onClick = { confirmOcr = false; viewModel.runOcr() }) { Text("Reconocer") } },
+            dismissButton = { TextButton(onClick = { confirmOcr = false }) { Text("Cancelar") } },
+        )
     }
     LazyColumn(contentPadding = PaddingValues(bottom = 24.dp), modifier = Modifier.fillMaxSize()) {
         item(key = "header") {
@@ -410,6 +428,11 @@ private fun ReadyContent(state: ImportUiState, book: Book, viewModel: ImportView
                                 Text("•", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.primary, modifier = Modifier.width(16.dp))
                                 Text(line, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                             }
+                        if (report.scannedPages > 0 && state.isFirstReview) {
+                            TextButton(onClick = { confirmOcr = true }) {
+                                Text("Reconocer el texto de ${plural(report.scannedPages, "esa página", "esas páginas")}")
+                            }
+                        }
                         }
                     }
                 }

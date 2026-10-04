@@ -22,11 +22,13 @@ class ProcessingRecovery @Inject constructor(
     fun resume() {
         scope.launch {
             db.bookDao().idsInStates(IMPORTING_STATES).forEach { queue.analyze(it) }
+            // Un OCR interrumpido sigue por las páginas que faltaban.
+            db.bookDao().idsInStates(listOf(BookState.OCR)).forEach { queue.analyze(it, ocr = true) }
             queue.resumePending()
         }
     }
 
     private companion object {
-        val IMPORTING_STATES = listOf(BookState.IDLE, BookState.ANALYZING, BookState.OCR, BookState.PARSING)
+        val IMPORTING_STATES = listOf(BookState.IDLE, BookState.ANALYZING, BookState.PARSING)
     }
 }

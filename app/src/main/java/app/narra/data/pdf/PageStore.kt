@@ -4,6 +4,7 @@ import app.narra.analysis.PageText
 import kotlinx.serialization.json.Json
 import java.io.BufferedWriter
 import java.io.File
+import java.io.IOException
 
 /**
  * Páginas extraídas en disco, una por línea (JSON Lines). Permite recorrer el libro varias
@@ -25,4 +26,17 @@ object PageStore {
         }
 
     fun readPage(file: File, index: Int): PageText? = read(file) { pages -> pages.firstOrNull { it.index == index } }
+
+    /** Guarda una página suelta (resultado del OCR) de forma atómica. */
+    fun saveSingle(file: File, page: PageText) {
+        file.parentFile?.mkdirs()
+        val partial = File(file.parentFile, "${file.name}.part")
+        partial.writeText(json.encodeToString(PageText.serializer(), page))
+        if (!partial.renameTo(file)) {
+            partial.delete()
+            throw IOException("No se pudo guardar ${file.name}")
+        }
+    }
+
+    fun loadSingle(file: File): PageText = json.decodeFromString(PageText.serializer(), file.readText())
 }

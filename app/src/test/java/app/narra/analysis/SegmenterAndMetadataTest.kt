@@ -57,6 +57,21 @@ class SegmenterAndMetadataTest {
     }
 
     @Test
+    fun `el encabezado del primer capítulo no es el título del libro`() {
+        val pages = (0..3).map { i ->
+            page(i) {
+                heading("Capítulo ${i + 1}. La isla", size = 28f)
+                repeat(20) { line(filler) }
+            }
+        }
+        assertNull(MetadataHeuristics.combine(PdfMetadata(), profile(pages)).title)
+
+        // «Libro» seguido de algo que no es un número sí puede ser un título.
+        val cover = listOf(page(0) { heading("Libro de los abrazos", size = 28f) }) + pages
+        assertEquals("Libro de los abrazos", MetadataHeuristics.combine(PdfMetadata(), profile(cover)).title)
+    }
+
+    @Test
     fun `detecta inglés y español`() {
         assertEquals("en", LanguageDetector.detect("The keeper of the lighthouse was waiting for her at the pier. ".repeat(10)))
         assertEquals("es", LanguageDetector.detect("El farero la esperaba en el muelle con una linterna en la mano. ".repeat(10)))

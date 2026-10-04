@@ -22,7 +22,7 @@ fun summarizeProcessing(book: Book, chapters: List<Chapter>, job: ProcessingJob?
         BookState.IDLE, BookState.ANALYZING -> ProcessingSummary(
             book = book,
             headline = "Analizando el libro",
-            detail = book.analysis.pagesTotal.takeIf { it > 0 }?.let { "Página ${book.analysis.pagesDone} de $it" },
+            detail = book.analysis.pagesTotal.takeIf { it > 0 }?.let { "${book.analysis.pagesDone} de $it páginas" },
             availability = null,
             fraction = book.analysis.fraction,
             etaMs = null,
@@ -31,7 +31,7 @@ fun summarizeProcessing(book: Book, chapters: List<Chapter>, job: ProcessingJob?
         BookState.OCR -> ProcessingSummary(
             book = book,
             headline = "Reconociendo el texto",
-            detail = "Página ${book.analysis.ocrPagesDone} de ${book.analysis.ocrPagesTotal}",
+            detail = "${book.analysis.ocrPagesDone} de ${book.analysis.ocrPagesTotal} páginas",
             availability = null,
             fraction = book.analysis.ocrFraction,
             etaMs = null,

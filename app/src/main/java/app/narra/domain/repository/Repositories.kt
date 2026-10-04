@@ -81,7 +81,8 @@ interface ImportRepository {
  * es una cola única (un libro tras otro) para no saturar el motor de voz ni la batería.
  */
 interface ProcessingQueue {
-    fun analyze(bookId: String, restart: Boolean = false)
+    /** Analiza el libro; con [ocr], reconoce también el texto de las páginas escaneadas. */
+    fun analyze(bookId: String, restart: Boolean = false, ocr: Boolean = false)
     fun cancelAnalysis(bookId: String)
 
     /** La cola de generación en el orden en que se procesará; los libros detenidos van al final. */

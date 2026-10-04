@@ -15,6 +15,7 @@ import app.narra.data.db.NarraDatabase
 import app.narra.data.db.SegmentEntity
 import app.narra.data.db.toJson
 import app.narra.data.files.BookStorage
+import app.narra.data.ocr.PageRecognizer
 import app.narra.data.repository.BookStatsUpdater
 import app.narra.domain.model.AnalysisReport
 import app.narra.domain.model.BookState
@@ -23,11 +24,13 @@ import app.narra.domain.model.ErrorKind
 import app.narra.domain.model.NarraException
 import app.narra.domain.model.Paragraph
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.delay
-import kotlinx.coroutines.isActive
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import java.io.File
 import java.io.IOException
 import javax.inject.Inject
@@ -37,8 +40,9 @@ import javax.inject.Singleton
  * Convierte un PDF importado en capítulos y segmentos listos para generar audio:
  *
  * 1. Lee el PDF una vez y guarda las páginas en disco mientras aprende su perfil.
- * 2. Detecta los capítulos recorriendo esas páginas.
- * 3. Limpia el texto capítulo a capítulo y lo guarda segmentado en la base de datos.
+ * 2. Si se pidió, reconoce el texto de las páginas escaneadas y lo incorpora a esas páginas.
+ * 3. Detecta los capítulos recorriendo esas páginas.
+ * 4. Limpia el texto capítulo a capítulo y lo guarda segmentado en la base de datos.
  *
  * En ningún momento se tiene el libro entero en memoria.
  */
@@ -49,10 +53,15 @@ class BookAnalyzer @Inject constructor(
     private val parser: PdfParser,
     private val coverRenderer: CoverRenderer,
     private val stats: BookStatsUpdater,
+    private val recognizer: PageRecognizer,
 ) {
     private val books = db.bookDao()
 
-    suspend fun analyze(bookId: String) {
+    /**
+     * Analiza el libro. Con [ocr], reconoce antes el texto de las páginas escaneadas que aún no
+     * lo tengan e informa de cada página con [onOcrProgress].
+     */
+    suspend fun analyze(bookId: String, ocr: Boolean = false, onOcrProgress: suspend (done: Int, total: Int) -> Unit = { _, _ -> }) {
         val book = books.get(bookId) ?: return
         // En un reanálisis se respeta el título que el usuario ya revisó.
         val firstAnalysis = book.analysisJson == null
@@ -60,11 +69,16 @@ class BookAnalyzer @Inject constructor(
             books.setState(bookId, BookState.ANALYZING)
             val source = storage.sourcePdf(bookId)
             val pagesFile = storage.pagesFile(bookId)
-            val (parsed, profile) = extract(bookId, source, pagesFile)
+            val (parsed, extracted) = extract(bookId, source, pagesFile)
+
+            val scanned = PageStore.read(pagesFile) { pages -> pages.filter { it.looksScanned }.map { it.index }.toList() }
+            if (ocr) recognizeMissing(bookId, source, scanned, onOcrProgress)
+            val recognized = scanned.filter { storage.ocrPage(bookId, it).exists() }
+            val profile = if (recognized.isEmpty()) extracted else mergeRecognized(bookId, pagesFile, recognized.toSet(), extracted.pageCount)
 
             if (profile.totalChars < MIN_BOOK_CHARS || profile.isMostlyScanned) {
-                // Sin capa de texto: hace falta reconocimiento óptico.
-                throw NarraException(ErrorKind.NO_TEXT)
+                // Sin capa de texto: hace falta reconocimiento óptico (o no sirvió).
+                throw NarraException(if (ocr) ErrorKind.OCR_FAILED else ErrorKind.NO_TEXT)
             }
             if (book.coverPath == null && profile.earlyPages.firstOrNull()?.looksLikeCover() == true) {
                 val cover = storage.cover(bookId)
@@ -92,6 +106,7 @@ class BookAnalyzer @Inject constructor(
                 references = plan.marks.count { !it.included },
                 scannedPages = profile.scannedPages,
                 hyphenationsFixed = cleaning.hyphenationsFixed,
+                ocrPages = recognized.size,
             )
             val current = books.get(bookId) ?: return
             books.update(
@@ -162,6 +177,48 @@ class BookAnalyzer @Inject constructor(
             val profile = builder?.build() ?: throw NarraException(ErrorKind.PDF_EMPTY)
             books.setAnalysisProgress(bookId, parsed.pageCount, parsed.pageCount, profile.scannedPages)
             parsed to profile
+        }
+
+    /** Reconoce las páginas escaneadas que todavía no tienen texto guardado. */
+    private suspend fun recognizeMissing(
+        bookId: String,
+        source: File,
+        scanned: List<Int>,
+        onProgress: suspend (done: Int, total: Int) -> Unit,
+    ) {
+        val missing = scanned.filterNot { storage.ocrPage(bookId, it).exists() }
+        if (missing.isEmpty()) return
+        books.setState(bookId, BookState.OCR)
+        var done = 0
+        books.setOcrProgress(bookId, done, missing.size)
+        onProgress(done, missing.size)
+        recognizer.recognize(source, missing) { page ->
+            withContext(Dispatchers.IO) { PageStore.saveSingle(storage.ocrPage(bookId, page.index), page) }
+            done++
+            books.setOcrProgress(bookId, done, missing.size)
+            onProgress(done, missing.size)
+        }
+    }
+
+    /** Sustituye las páginas escaneadas por su texto reconocido y recalcula el perfil. */
+    private suspend fun mergeRecognized(bookId: String, pagesFile: File, recognized: Set<Int>, pageCount: Int): DocumentProfile =
+        withContext(Dispatchers.IO) {
+            val builder = DocumentProfile.Builder(pageCount)
+            val partial = File(pagesFile.parentFile, "${pagesFile.name}.part")
+            partial.bufferedWriter().use { writer ->
+                PageStore.read(pagesFile) { pages ->
+                    for (page in pages) {
+                        val merged = if (page.index in recognized) PageStore.loadSingle(storage.ocrPage(bookId, page.index)) else page
+                        PageStore.write(writer, merged)
+                        builder.accept(merged)
+                    }
+                }
+            }
+            if (!partial.renameTo(pagesFile)) {
+                pagesFile.delete()
+                if (!partial.renameTo(pagesFile)) throw IOException("No se pudo guardar el texto reconocido")
+            }
+            builder.build()
         }
 
     /** Tercera pasada: texto limpio por capítulo → segmentos en la base de datos. */

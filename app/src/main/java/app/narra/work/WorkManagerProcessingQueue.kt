@@ -37,14 +37,15 @@ class WorkManagerProcessingQueue @Inject constructor(
     private val jobs get() = db.jobDao()
     private val books get() = db.bookDao()
 
-    override fun analyze(bookId: String, restart: Boolean) {
+    override fun analyze(bookId: String, restart: Boolean, ocr: Boolean) {
         val request = OneTimeWorkRequestBuilder<AnalysisWorker>()
-            .setInputData(workDataOf(AnalysisWorker.KEY_BOOK_ID to bookId))
+            .setInputData(workDataOf(AnalysisWorker.KEY_BOOK_ID to bookId, AnalysisWorker.KEY_OCR to ocr))
             .addTag(TAG_ANALYSIS)
             .build()
         workManager.enqueueUniqueWork(
             AnalysisWorker.uniqueName(bookId),
-            if (restart) ExistingWorkPolicy.REPLACE else ExistingWorkPolicy.KEEP,
+            // Pedir OCR sustituye a un análisis sin OCR que estuviera en marcha.
+            if (restart || ocr) ExistingWorkPolicy.REPLACE else ExistingWorkPolicy.KEEP,
             request,
         )
     }

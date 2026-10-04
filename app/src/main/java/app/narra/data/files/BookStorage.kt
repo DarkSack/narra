@@ -27,6 +27,7 @@ data class StorageUsage(
  * files/books/<id>/source.pdf        PDF original
  * files/books/<id>/cover.jpg         portada
  * files/books/<id>/pages.jsonl       texto por página con posiciones (análisis y OCR)
+ * files/books/<id>/ocr/<página>.json  texto reconocido de cada página escaneada
  * files/books/<id>/audio/<cap>/<seg>.m4a
  * cache/synthesis/                   WAV temporales del motor de voz
  * ```
@@ -40,6 +41,9 @@ class BookStorage @Inject constructor(@ApplicationContext private val context: C
     fun cover(bookId: String): File = File(bookDir(bookId), "cover.jpg")
     fun pagesFile(bookId: String): File = File(bookDir(bookId), "pages.jsonl")
     fun audioDir(bookId: String): File = File(bookDir(bookId), "audio")
+
+    /** Resultado del OCR de una página. Se conserva para no repetirlo en un nuevo análisis. */
+    fun ocrPage(bookId: String, pageIndex: Int): File = File(File(bookDir(bookId), "ocr"), "$pageIndex.json")
 
     fun audioFile(bookId: String, chapterId: Long, segmentId: Long, format: AudioFormat): File =
         File(File(audioDir(bookId), chapterId.toString()), "$segmentId.${format.extension}")
@@ -74,7 +78,7 @@ class BookStorage @Inject constructor(@ApplicationContext private val context: C
         root.listFiles().orEmpty().forEach { book ->
             audio += File(book, "audio").sizeRecursive()
             source += File(book, "source.pdf").length()
-            working += File(book, "pages.jsonl").length() + File(book, "cover.jpg").length()
+            working += File(book, "pages.jsonl").length() + File(book, "cover.jpg").length() + File(book, "ocr").sizeRecursive()
         }
         StorageUsage(
             audioBytes = audio,

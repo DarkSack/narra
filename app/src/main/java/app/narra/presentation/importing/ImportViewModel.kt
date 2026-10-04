@@ -10,6 +10,7 @@ import app.narra.domain.model.Book
 import app.narra.domain.model.BookMetadata
 import app.narra.domain.model.BookState
 import app.narra.domain.model.Chapter
+import app.narra.domain.model.ErrorKind
 import app.narra.domain.model.NarraException
 import app.narra.domain.repository.BookRepository
 import app.narra.domain.repository.ProcessingQueue
@@ -78,7 +79,11 @@ class ImportViewModel @Inject constructor(
         ImportUiState(loading = false, book = book, chapters = chapters, report = report)
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(STOP_TIMEOUT_MS), ImportUiState())
 
-    fun retry() = queue.analyze(bookId, restart = true)
+    /** Repite el análisis; si lo que falló fue el reconocimiento de texto, lo repite también. */
+    fun retry() = queue.analyze(bookId, restart = true, ocr = state.value.book?.error?.kind == ErrorKind.OCR_FAILED)
+
+    /** Reconoce el texto de las páginas escaneadas y vuelve a analizar el libro. */
+    fun runOcr() = queue.analyze(bookId, restart = true, ocr = true)
 
     fun rename(chapter: Chapter, title: String) = launch { books.renameChapter(chapter.id, title) }
 

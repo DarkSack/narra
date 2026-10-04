@@ -58,8 +58,11 @@ data class AnalysisReport(
     val quotes: Int = 0,
     val dialogues: Int = 0,
     val references: Int = 0,
+    /** Páginas escaneadas que siguen sin texto (no se reconocieron o están en blanco). */
     val scannedPages: Int = 0,
     val hyphenationsFixed: Int = 0,
+    /** Páginas cuyo texto se obtuvo por reconocimiento óptico. */
+    val ocrPages: Int = 0,
 )
 
 /** De dónde salió la lista de capítulos, de más a menos fiable. */

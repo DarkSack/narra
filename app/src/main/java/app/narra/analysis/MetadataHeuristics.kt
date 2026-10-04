@@ -27,6 +27,13 @@ object MetadataHeuristics {
     private val junkAuthor = Regex("^(user|usuario|admin(istrator|istrador)?|owner|propietario|unknown|desconocido|microsoft.*|.*@.*)$", RegexOption.IGNORE_CASE)
     private val isbnPattern = Regex("ISBN(?:-1[03])?[:\\s]*((?:97[89][\\s-]?)?(?:\\d[\\s-]?){9}[\\dXx])", RegexOption.IGNORE_CASE)
     private val keywordSeparators = Regex("[;,\\n]")
+
+    /** «Capítulo 1. La isla», «Chapter IV», «Prólogo»: encabezados de sección, no el título del libro. */
+    private val sectionHeading = Regex(
+        "^((cap[ií]tulo|chapter|parte|part|libro|book)\\s+(\\d{1,3}|[IVXLC]{1,7})\\b|" +
+            "(pr[oó]logo|prologue|ep[ií]logo|epilogue|introducci[oó]n|introduction|prefacio|preface)\\W*$)",
+        RegexOption.IGNORE_CASE,
+    )
     private const val MAX_TITLE = 200
     private const val MAX_KEYWORDS = 12
 
@@ -46,11 +53,15 @@ object MetadataHeuristics {
     fun isPlausibleTitle(title: String): Boolean =
         title.length in 2..MAX_TITLE && title.any { it.isLetter() } && !junkTitle.matches(title.trim())
 
-    /** La línea más grande de las primeras páginas suele ser el título. */
+    /**
+     * La línea más grande de las primeras páginas suele ser el título, salvo que sea el encabezado
+     * del primer capítulo (libros sin portada, como muchos escaneos).
+     */
     private fun titleFromFirstPages(profile: DocumentProfile): String? = profile.earlyPages
         .take(TITLE_SEARCH_PAGES)
         .flatMap { it.lines }
         .filter { it.text.length in 2..MAX_TITLE && it.text.any { c -> c.isLetter() } && !DocumentProfile.inMarginZone(it) }
+        .filterNot { sectionHeading.containsMatchIn(it.text.trim()) }
         .maxByOrNull { it.fontSize }
         ?.takeIf { it.fontSize >= profile.bodyFontSize * TITLE_SIZE_FACTOR }
         ?.text?.trim()
