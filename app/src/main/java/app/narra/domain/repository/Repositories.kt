@@ -33,6 +33,9 @@ interface BookRepository {
     suspend fun bookIdsWithChapterMatching(query: String): Set<String>
 
     suspend fun setFavorite(id: String, favorite: Boolean)
+
+    /** Limita el OCR a [pages] (desde 0); null = todas las páginas escaneadas. */
+    suspend fun setOcrPages(id: String, pages: IntRange?)
     suspend fun updateMetadata(id: String, metadata: BookMetadata)
     suspend fun updateVoice(id: String, voice: VoiceSettings)
     suspend fun setCover(id: String, image: Uri)

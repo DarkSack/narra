@@ -74,6 +74,8 @@ class BookRepositoryImpl @Inject constructor(
 
     override suspend fun setFavorite(id: String, favorite: Boolean) = books.setFavorite(id, favorite)
 
+    override suspend fun setOcrPages(id: String, pages: IntRange?) = books.setOcrPages(id, pages?.first, pages?.last)
+
     override suspend fun updateMetadata(id: String, metadata: BookMetadata) {
         val current = books.get(id) ?: return
         books.update(

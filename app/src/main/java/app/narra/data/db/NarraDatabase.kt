@@ -13,11 +13,13 @@ import androidx.room.RoomDatabase
         PlaybackProgressEntity::class,
         ProcessingJobEntity::class,
     ],
-    version = 2,
+    version = 3,
     exportSchema = true,
     autoMigrations = [
         // 2: motor de voz de cada libro (books.voiceEngine).
         AutoMigration(from = 1, to = 2),
+        // 3: páginas elegidas para el OCR (books.ocrFirstPage, books.ocrLastPage).
+        AutoMigration(from = 2, to = 3),
     ],
 )
 abstract class NarraDatabase : RoomDatabase() {

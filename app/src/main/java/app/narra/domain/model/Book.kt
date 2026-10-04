@@ -37,6 +37,8 @@ data class AnalysisProgress(
     val scannedPages: Int = 0,
     val ocrPagesDone: Int = 0,
     val ocrPagesTotal: Int = 0,
+    /** Páginas (desde 0) a las que se limitó el OCR; null = todas las escaneadas. */
+    val ocrPages: IntRange? = null,
 ) {
     val fraction: Float get() = if (pagesTotal > 0) pagesDone.toFloat() / pagesTotal else 0f
     val ocrFraction: Float get() = if (ocrPagesTotal > 0) ocrPagesDone.toFloat() / ocrPagesTotal else 0f

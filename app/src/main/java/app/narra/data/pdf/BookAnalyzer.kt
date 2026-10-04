@@ -13,6 +13,7 @@ import app.narra.analysis.Segmenter
 import app.narra.data.db.ChapterEntity
 import app.narra.data.db.NarraDatabase
 import app.narra.data.db.SegmentEntity
+import app.narra.data.db.ocrPages
 import app.narra.data.db.toJson
 import app.narra.data.files.BookStorage
 import app.narra.data.ocr.PageRecognizer
@@ -72,11 +73,13 @@ class BookAnalyzer @Inject constructor(
             val (parsed, extracted) = extract(bookId, source, pagesFile)
 
             val scanned = PageStore.read(pagesFile) { pages -> pages.filter { it.looksScanned }.map { it.index }.toList() }
-            if (ocr) recognizeMissing(bookId, source, scanned, onOcrProgress)
+            // El usuario puede limitar el OCR a unas páginas: el resto de las escaneadas se queda sin texto.
+            val chosen = book.ocrPages()
+            if (ocr) recognizeMissing(bookId, source, chosen?.let { range -> scanned.filter { it in range } } ?: scanned, onOcrProgress)
             val recognized = scanned.filter { storage.ocrPage(bookId, it).exists() }
             val profile = if (recognized.isEmpty()) extracted else mergeRecognized(bookId, pagesFile, recognized.toSet(), extracted.pageCount)
 
-            if (profile.totalChars < MIN_BOOK_CHARS || profile.isMostlyScanned) {
+            if (profile.totalChars < MIN_BOOK_CHARS || (profile.isMostlyScanned && chosen == null)) {
                 // Sin capa de texto: hace falta reconocimiento óptico (o no sirvió).
                 throw NarraException(if (ocr) ErrorKind.OCR_FAILED else ErrorKind.NO_TEXT)
             }

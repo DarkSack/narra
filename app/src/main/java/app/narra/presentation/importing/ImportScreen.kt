@@ -128,6 +128,7 @@ fun ImportScreen(
     val state by viewModel.state.collectAsStateWithLifecycle()
     val snackbar = remember { SnackbarHostState() }
     var confirmDelete by remember { mutableStateOf(false) }
+    var choosingOcrPages by remember { mutableStateOf(false) }
     // El aviso de "tu libro está listo" necesita permiso de notificaciones (Android 13+). Se pide
     // al crear el audiolibro, que es cuando se entiende para qué sirve; la creación sigue igual si se niega.
     val notificationPermission = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { viewModel.create() }
@@ -197,11 +198,25 @@ fun ImportScreen(
                 Phase.LOADING, Phase.GONE -> Box(Modifier.fillMaxSize())
                 Phase.ANALYZING -> book?.let { AnalyzingContent(it) }
                 Phase.ERROR -> book?.let {
-                    ErrorContent(it, onRetry = viewModel::retry, onRunOcr = viewModel::runOcr, onDiscard = { confirmDelete = true })
+                    ErrorContent(it, onRetry = viewModel::retry, onRunOcr = { choosingOcrPages = true }, onDiscard = { confirmDelete = true })
                 }
                 Phase.READY -> book?.let { ReadyContent(state, it, viewModel, onReadChapter) }
             }
         }
+    }
+
+    if (choosingOcrPages && book != null) {
+        OcrPagesDialog(
+            pageCount = book.pageCount,
+            scannedPages = book.analysis.scannedPages,
+            initial = book.analysis.ocrPages,
+            losesChapterEdits = false,
+            onConfirm = { pages ->
+                choosingOcrPages = false
+                viewModel.runOcr(pages)
+            },
+            onDismiss = { choosingOcrPages = false },
+        )
     }
 
     if (confirmDelete) {
@@ -347,12 +362,16 @@ private fun ReadyContent(state: ImportUiState, book: Book, viewModel: ImportView
         if (uri != null) viewModel.setCover(uri)
     }
     if (confirmOcr) {
-        AlertDialog(
-            onDismissRequest = { confirmOcr = false },
-            title = { Text("¿Reconocer el texto escaneado?") },
-            text = { Text("Leeremos esas páginas como imágenes, en tu teléfono. Después volveremos a buscar los capítulos, así que se perderán los cambios que hayas hecho en ellos.") },
-            confirmButton = { TextButton(onClick = { confirmOcr = false; viewModel.runOcr() }) { Text("Reconocer") } },
-            dismissButton = { TextButton(onClick = { confirmOcr = false }) { Text("Cancelar") } },
+        OcrPagesDialog(
+            pageCount = book.pageCount,
+            scannedPages = book.analysis.scannedPages,
+            initial = book.analysis.ocrPages,
+            losesChapterEdits = true,
+            onConfirm = { pages ->
+                confirmOcr = false
+                viewModel.runOcr(pages)
+            },
+            onDismiss = { confirmOcr = false },
         )
     }
     LazyColumn(contentPadding = PaddingValues(bottom = 24.dp), modifier = Modifier.fillMaxSize()) {

@@ -42,6 +42,9 @@ data class BookEntity(
     val scannedPages: Int = 0,
     val ocrPagesDone: Int = 0,
     val ocrPagesTotal: Int = 0,
+    /** Páginas (desde 0, ambas incluidas) a las que el usuario limitó el OCR; null = todas. */
+    val ocrFirstPage: Int? = null,
+    val ocrLastPage: Int? = null,
     /** [app.narra.domain.model.AnalysisReport] serializado. */
     val analysisJson: String? = null,
     // Voz y audio

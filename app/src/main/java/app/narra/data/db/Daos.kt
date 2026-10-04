@@ -64,6 +64,9 @@ interface BookDao {
     @Query("UPDATE books SET ocrPagesDone = :done, ocrPagesTotal = :total WHERE id = :id")
     suspend fun setOcrProgress(id: String, done: Int, total: Int)
 
+    @Query("UPDATE books SET ocrFirstPage = :first, ocrLastPage = :last WHERE id = :id")
+    suspend fun setOcrPages(id: String, first: Int?, last: Int?)
+
     @Query("UPDATE books SET coverPath = :path WHERE id = :id")
     suspend fun setCover(id: String, path: String?)
 

@@ -82,8 +82,11 @@ class ImportViewModel @Inject constructor(
     /** Repite el análisis; si lo que falló fue el reconocimiento de texto, lo repite también. */
     fun retry() = queue.analyze(bookId, restart = true, ocr = state.value.book?.error?.kind == ErrorKind.OCR_FAILED)
 
-    /** Reconoce el texto de las páginas escaneadas y vuelve a analizar el libro. */
-    fun runOcr() = queue.analyze(bookId, restart = true, ocr = true)
+    /** Reconoce el texto de las páginas escaneadas ([pages], desde 0; null = todas) y vuelve a analizar el libro. */
+    fun runOcr(pages: IntRange?) = launch {
+        books.setOcrPages(bookId, pages)
+        queue.analyze(bookId, restart = true, ocr = true)
+    }
 
     fun rename(chapter: Chapter, title: String) = launch { books.renameChapter(chapter.id, title) }
 

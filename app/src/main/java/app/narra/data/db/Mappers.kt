@@ -34,6 +34,12 @@ internal fun String.toAnalysisReport(): AnalysisReport =
 private fun error(kind: app.narra.domain.model.ErrorKind?, detail: String?): ProcessingError? =
     kind?.let { ProcessingError(it, detail) }
 
+internal fun BookEntity.ocrPages(): IntRange? {
+    val first = ocrFirstPage ?: return null
+    val last = ocrLastPage ?: return null
+    return first..last
+}
+
 internal fun BookEntity.metadata() = BookMetadata(
     title = title,
     author = author,
@@ -85,6 +91,7 @@ internal fun BookWithProgress.toDomain(): Book = Book(
         scannedPages = book.scannedPages,
         ocrPagesDone = book.ocrPagesDone,
         ocrPagesTotal = book.ocrPagesTotal,
+        ocrPages = book.ocrPages(),
     ),
     progress = progress?.toDomain(),
 )
