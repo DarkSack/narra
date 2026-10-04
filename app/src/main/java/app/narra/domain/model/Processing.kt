@@ -16,6 +16,9 @@ enum class ErrorKind {
     SYNTHESIS_FAILED,
     ENCODING_FAILED,
     NETWORK,
+
+    /** No se pudo escribir en la carpeta elegida al exportar. */
+    EXPORT_FAILED,
     UNKNOWN,
 }
 
@@ -78,3 +81,13 @@ data class ListeningProgress(
     val completed: Boolean,
     val updatedAt: Long,
 )
+
+/** Estado de una exportación del audio de un libro a una carpeta del teléfono. */
+sealed interface ExportStatus {
+    /** [total] es 0 mientras se prepara. */
+    data class Running(val done: Int, val total: Int) : ExportStatus
+
+    data class Done(val folderName: String, val files: Int, val chaptersMissing: Int) : ExportStatus
+
+    data class Failed(val kind: ErrorKind) : ExportStatus
+}

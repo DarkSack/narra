@@ -5,6 +5,7 @@ import app.narra.domain.model.Book
 import app.narra.domain.model.BookState
 import app.narra.domain.model.Chapter
 import app.narra.domain.model.ChapterState
+import app.narra.domain.model.ErrorKind
 import app.narra.domain.model.JobState
 import app.narra.domain.model.ProcessingJob
 import app.narra.presentation.components.ProcessingSummary
@@ -55,16 +56,22 @@ fun summarizeProcessing(book: Book, chapters: List<Chapter>, job: ProcessingJob?
                 ?: included.firstOrNull(pending)
             val number = current?.let { included.indexOf(it) + 1 }
             val paused = book.state == BookState.PAUSED
-            // Otro libro está ocupando el motor de voz: este espera su turno.
+            // Otro libro está ocupando el motor de voz, o la voz en línea espera conexión.
             val waiting = !paused && job?.state == JobState.QUEUED
+            val needsNetwork = waiting && job?.error?.kind == ErrorKind.NETWORK
             val headline = when {
+                needsNetwork -> "Esperando conexión"
                 waiting -> "En cola"
                 number == null -> if (paused) "En pausa" else "Generando audio"
                 paused -> "En pausa · capítulo $number de ${included.size}"
                 else -> "Generando capítulo $number de ${included.size}"
             }
-            val detail = current?.takeIf { it.segmentCount > 0 }?.let {
-                "Segmento ${(it.segmentsAvailable + 1).coerceAtMost(it.segmentCount)} de ${it.segmentCount}"
+            val detail = if (needsNetwork) {
+                "La voz elegida necesita internet. Seguirá sola cuando te conectes."
+            } else {
+                current?.takeIf { it.segmentCount > 0 }?.let {
+                    "Segmento ${(it.segmentsAvailable + 1).coerceAtMost(it.segmentCount)} de ${it.segmentCount}"
+                }
             }
             ProcessingSummary(
                 book = book,

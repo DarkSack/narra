@@ -8,17 +8,23 @@ import app.narra.data.pdf.PdfParser
 import app.narra.data.repository.BookRepositoryImpl
 import app.narra.data.repository.ImportRepositoryImpl
 import app.narra.data.repository.PlaybackRepositoryImpl
+import app.narra.data.repository.StorageRepositoryImpl
 import app.narra.data.settings.SettingsRepositoryImpl
+import app.narra.data.system.AndroidNetworkStatus
+import app.narra.data.system.NetworkStatus
 import app.narra.data.tts.AndroidTtsProvider
 import app.narra.data.tts.TtsProvidersImpl
 import app.narra.domain.model.VoiceSettings
+import app.narra.domain.repository.AudiobookExports
 import app.narra.domain.repository.BookRepository
 import app.narra.domain.repository.ImportRepository
 import app.narra.domain.repository.PlaybackRepository
 import app.narra.domain.repository.ProcessingQueue
 import app.narra.domain.repository.SettingsRepository
+import app.narra.domain.repository.StorageRepository
 import app.narra.domain.tts.TtsProvider
 import app.narra.domain.tts.TtsProviders
+import app.narra.work.WorkManagerExports
 import app.narra.work.WorkManagerProcessingQueue
 import dagger.Binds
 import dagger.Module
@@ -67,6 +73,15 @@ abstract class DataBindingsModule {
 
     @Binds
     abstract fun processingQueue(impl: WorkManagerProcessingQueue): ProcessingQueue
+
+    @Binds
+    abstract fun audiobookExports(impl: WorkManagerExports): AudiobookExports
+
+    @Binds
+    abstract fun storageRepository(impl: StorageRepositoryImpl): StorageRepository
+
+    @Binds
+    abstract fun networkStatus(impl: AndroidNetworkStatus): NetworkStatus
 
     @Binds
     abstract fun pdfParser(impl: PdfBoxParser): PdfParser

@@ -3,22 +3,13 @@ package app.narra.data.files
 import android.content.Context
 import android.os.StatFs
 import app.narra.domain.model.AudioFormat
+import app.narra.domain.model.StorageUsage
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.io.File
 import javax.inject.Inject
 import javax.inject.Singleton
-
-data class StorageUsage(
-    val audioBytes: Long,
-    val sourceBytes: Long,
-    val workingBytes: Long,
-    val tempBytes: Long,
-    val availableBytes: Long,
-) {
-    val totalBytes: Long get() = audioBytes + sourceBytes + workingBytes + tempBytes
-}
 
 /**
  * Dónde vive cada archivo de un libro. La base de datos solo guarda rutas.
@@ -48,9 +39,9 @@ class BookStorage @Inject constructor(@ApplicationContext private val context: C
     fun audioFile(bookId: String, chapterId: Long, segmentId: Long, format: AudioFormat): File =
         File(File(audioDir(bookId), chapterId.toString()), "$segmentId.${format.extension}")
 
-    fun tempDir(): File = File(context.cacheDir, "synthesis").apply { mkdirs() }
+    fun tempDir(): File = File(context.cacheDir, SYNTHESIS_DIR).apply { mkdirs() }
 
-    fun exportDir(): File = File(context.cacheDir, "export").apply { mkdirs() }
+    fun exportDir(): File = File(context.cacheDir, EXPORT_DIR).apply { mkdirs() }
 
     suspend fun ensureBookDir(bookId: String): File = withContext(Dispatchers.IO) {
         bookDir(bookId).apply { mkdirs() }
@@ -64,10 +55,30 @@ class BookStorage @Inject constructor(@ApplicationContext private val context: C
         audioDir(bookId).deleteRecursively()
     }
 
-    suspend fun clearTemp() = withContext(Dispatchers.IO) {
-        File(context.cacheDir, "synthesis").deleteRecursively()
-        File(context.cacheDir, "export").deleteRecursively()
+    /**
+     * Borra los temporales de Narra con más de [STALE_AFTER_MS]: los de un fragmento o una
+     * exportación en curso son recientes y se respetan. Solo toca sus propias carpetas: en la
+     * caché también viven los cerrojos de las bases de datos.
+     */
+    suspend fun clearTemporaryFiles(): Long = withContext(Dispatchers.IO) {
+        val limit = System.currentTimeMillis() - STALE_AFTER_MS
+        var freed = 0L
+        temporaryDirs().forEach { dir ->
+            dir.walkBottomUp().filter { it != dir }.forEach { file ->
+                when {
+                    file.isFile && file.lastModified() < limit -> {
+                        val size = file.length()
+                        if (file.delete()) freed += size
+                    }
+                    // Las carpetas solo se quitan si quedaron vacías.
+                    file.isDirectory -> file.delete()
+                }
+            }
+        }
+        freed
     }
+
+    private fun temporaryDirs(): List<File> = listOf(File(context.cacheDir, SYNTHESIS_DIR), File(context.cacheDir, EXPORT_DIR))
 
     fun availableBytes(): Long = StatFs(context.filesDir.absolutePath).availableBytes
 
@@ -84,12 +95,18 @@ class BookStorage @Inject constructor(@ApplicationContext private val context: C
             audioBytes = audio,
             sourceBytes = source,
             workingBytes = working,
-            tempBytes = File(context.cacheDir, "synthesis").sizeRecursive() +
-                File(context.cacheDir, "export").sizeRecursive(),
+            tempBytes = temporaryDirs().sumOf { it.sizeRecursive() },
             availableBytes = availableBytes(),
         )
     }
 
     private fun File.sizeRecursive(): Long =
         if (!exists()) 0L else walkBottomUp().filter { it.isFile }.sumOf { it.length() }
+
+    private companion object {
+        /** Nada en curso conserva un temporal tanto tiempo: un fragmento tarda segundos. */
+        const val STALE_AFTER_MS = 60 * 60 * 1_000L
+        const val SYNTHESIS_DIR = "synthesis"
+        const val EXPORT_DIR = "export"
+    }
 }

@@ -12,12 +12,15 @@ import app.narra.data.db.toParagraphs
 import app.narra.data.db.voiceSettings
 import app.narra.data.files.BookStorage
 import app.narra.data.repository.BookStatsUpdater
+import app.narra.data.system.NetworkStatus
 import app.narra.domain.model.BookState
 import app.narra.domain.model.ChapterState
 import app.narra.domain.model.ErrorKind
 import app.narra.domain.model.JobState
 import app.narra.domain.model.NarraException
+import app.narra.domain.model.NetworkPolicy
 import app.narra.domain.model.SegmentState
+import app.narra.domain.repository.SettingsRepository
 import app.narra.domain.tts.TtsProviders
 import app.narra.domain.tts.TtsSession
 import kotlinx.coroutines.CancellationException
@@ -30,6 +33,8 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 import java.io.IOException
 import javax.inject.Inject
@@ -55,6 +60,15 @@ sealed interface GenerationEvent {
     data class Failed(override val bookId: String, override val title: String, val kind: ErrorKind) : GenerationEvent
 }
 
+/** Por qué terminó una vuelta de la cola. */
+sealed interface QueueResult {
+    /** No queda nada que hacer (o se canceló). */
+    data object Idle : QueueResult
+
+    /** Quedan libros cuya voz necesita una conexión que ahora no hay. */
+    data class NeedsNetwork(val policy: NetworkPolicy) : QueueResult
+}
+
 /**
  * Procesa la cola de generación: un segmento cada vez, del libro que toca. Antes de cada
  * segmento vuelve a mirar la cola, así un libro adelantado o un capítulo pedido por el usuario
@@ -67,14 +81,21 @@ class AudioGenerator @Inject constructor(
     private val stats: BookStatsUpdater,
     private val providers: TtsProviders,
     private val renderer: SegmentAudioRenderer,
+    private val settings: SettingsRepository,
+    private val network: NetworkStatus,
 ) {
+    /** Un solo procesador a la vez, aunque WorkManager despierte dos (con y sin requisito de red). */
+    private val running = Mutex()
+
     private val books get() = db.bookDao()
     private val chapters get() = db.chapterDao()
     private val segments get() = db.segmentDao()
     private val jobs get() = db.jobDao()
 
-    suspend fun runQueue(onEvent: suspend (GenerationEvent) -> Unit) {
+    suspend fun runQueue(onEvent: suspend (GenerationEvent) -> Unit): QueueResult = running.withLock {
         val sessions = HashMap<String, TtsSession>()
+        // Quizá ya hay la conexión que faltaba: se vuelve a comprobar libro a libro.
+        jobs.clearNetworkWaits()
         try {
             while (currentCoroutineContext().isActive) {
                 val job = jobs.next() ?: break
@@ -104,11 +125,18 @@ class AudioGenerator @Inject constructor(
                         stopBook(book, outcome.error)
                         onEvent(GenerationEvent.Failed(book.id, book.title, outcome.error.kind))
                     }
+                    // Espera su conexión sin bloquear a los libros con voces del teléfono.
+                    Outcome.NeedsNetwork -> jobs.setState(book.id, JobState.QUEUED, ErrorKind.NETWORK)
                     Outcome.Done, Outcome.Interrupted, Outcome.WillRetry -> Unit
                 }
             }
         } finally {
             sessions.values.forEach { it.close() }
+        }
+        if (currentCoroutineContext().isActive && jobs.waitingForNetwork() > 0) {
+            QueueResult.NeedsNetwork(settings.settings.first().networkPolicy)
+        } else {
+            QueueResult.Idle
         }
     }
 
@@ -132,6 +160,7 @@ class AudioGenerator @Inject constructor(
         data object Done : Outcome
         data object Interrupted : Outcome
         data object WillRetry : Outcome
+        data object NeedsNetwork : Outcome
         data class Fatal(val error: NarraException) : Outcome
     }
 
@@ -144,6 +173,10 @@ class AudioGenerator @Inject constructor(
         val endsChapter = segments.lastIndex(segment.chapterId) == segment.orderIndex
         val started = SystemClock.elapsedRealtime()
         return try {
+            if (session.requiresNetwork(voice) && !network.allows(settings.settings.first().networkPolicy)) {
+                release(segment)
+                return Outcome.NeedsNetwork
+            }
             val rendered = whileJobActive(book.id) {
                 renderer.render(session, segment.paragraphsJson.toParagraphs(), voice, endsChapter, target)
             }
@@ -183,6 +216,10 @@ class AudioGenerator @Inject constructor(
             throw e
         } catch (e: Exception) {
             val error = e.toNarraException()
+            if (error.kind == ErrorKind.NETWORK) {
+                release(segment)
+                return Outcome.NeedsNetwork
+            }
             if (error.kind in FATAL) {
                 release(segment)
                 return Outcome.Fatal(error)
@@ -283,7 +320,7 @@ class AudioGenerator @Inject constructor(
         val ACTIVE_STATES = setOf(JobState.QUEUED, JobState.RUNNING)
 
         /** Errores que no se arreglan reintentando el mismo segmento: se detiene el libro. */
-        val FATAL = setOf(ErrorKind.TTS_UNAVAILABLE, ErrorKind.VOICE_UNAVAILABLE, ErrorKind.STORAGE_FULL, ErrorKind.NETWORK)
+        val FATAL = setOf(ErrorKind.TTS_UNAVAILABLE, ErrorKind.VOICE_UNAVAILABLE, ErrorKind.STORAGE_FULL)
 
         const val MAX_ATTEMPTS = 3
         const val RETRY_BACKOFF_MS = 2_000L

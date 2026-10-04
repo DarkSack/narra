@@ -9,6 +9,8 @@ App de Android que convierte tus PDF en audiolibros organizados, en el teléfono
   plano y puedes empezar a escuchar el primero mientras se crean los demás.
 - **Escucha** con reproductor completo: velocidad, temporizador, saltos configurables,
   notificación, pantalla de bloqueo y progreso guardado.
+- **Exporta** el audiolibro a la carpeta que elijas: un M4A por capítulo y la portada.
+- **PDF escaneados:** reconoce el texto de las páginas en el propio teléfono.
 
 El PDF nunca sale del teléfono.
 

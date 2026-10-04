@@ -8,6 +8,7 @@ import androidx.work.ForegroundInfo
 import androidx.work.WorkerParameters
 import app.narra.data.generation.AudioGenerator
 import app.narra.data.generation.GenerationEvent
+import app.narra.data.generation.QueueResult
 import dagger.assisted.Assisted
 import dagger.assisted.AssistedInject
 
@@ -21,16 +22,21 @@ class GenerationWorker @AssistedInject constructor(
     @Assisted params: WorkerParameters,
     private val generator: AudioGenerator,
     private val notifications: GenerationNotifications,
+    private val queue: WorkManagerProcessingQueue,
+    private val background: BackgroundPolicy,
 ) : CoroutineWorker(context, params) {
 
     override suspend fun doWork(): Result {
-        generator.runQueue { event ->
+        // Con la creación limitada a la app abierta, la cola sigue al volver a Narra.
+        if (!background.allowsWork()) return Result.success()
+        val result = generator.runQueue { event ->
             when (event) {
                 is GenerationEvent.Progress -> promote(notifications.foregroundInfo(event))
                 is GenerationEvent.Finished -> notifications.finished(event)
                 is GenerationEvent.Failed -> notifications.failed(event)
             }
         }
+        if (result is QueueResult.NeedsNetwork) queue.waitForNetwork(result.policy)
         return Result.success()
     }
 
@@ -50,6 +56,9 @@ class GenerationWorker @AssistedInject constructor(
 
     companion object {
         const val UNIQUE_NAME = "generation"
+
+        /** Despertar aparte que espera la conexión para las voces en línea. */
+        const val NETWORK_UNIQUE_NAME = "generation-network"
         private const val TAG = "GenerationWorker"
     }
 }

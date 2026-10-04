@@ -4,6 +4,7 @@ import android.content.Context
 import androidx.room.withTransaction
 import androidx.work.Constraints
 import androidx.work.ExistingWorkPolicy
+import androidx.work.NetworkType
 import androidx.work.OneTimeWorkRequestBuilder
 import androidx.work.WorkManager
 import androidx.work.workDataOf
@@ -13,12 +14,14 @@ import app.narra.data.db.toDomain
 import app.narra.data.repository.BookStatsUpdater
 import app.narra.domain.model.BookState
 import app.narra.domain.model.JobState
+import app.narra.domain.model.NetworkPolicy
 import app.narra.domain.model.ProcessingJob
 import app.narra.domain.repository.ProcessingQueue
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.map
+import java.util.concurrent.TimeUnit
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -149,8 +152,30 @@ class WorkManagerProcessingQueue @Inject constructor(
         workManager.enqueueUniqueWork(GenerationWorker.UNIQUE_NAME, ExistingWorkPolicy.APPEND_OR_REPLACE, request)
     }
 
+    /** Detiene el procesador sin tocar la cola: el segmento en curso vuelve a quedar pendiente. */
+    fun stopProcessor() {
+        workManager.cancelUniqueWork(GenerationWorker.UNIQUE_NAME)
+        workManager.cancelUniqueWork(GenerationWorker.NETWORK_UNIQUE_NAME)
+    }
+
+    /**
+     * Vuelve a despertar al procesador cuando haya la conexión que pide [policy]. Va aparte de
+     * la cola normal para que un libro nuevo con voz del teléfono no tenga que esperar a la red.
+     * El retraso evita reintentar en bucle si hay red pero el servicio de la voz no responde.
+     */
+    fun waitForNetwork(policy: NetworkPolicy) {
+        val network = if (policy == NetworkPolicy.WIFI_ONLY) NetworkType.UNMETERED else NetworkType.CONNECTED
+        val request = OneTimeWorkRequestBuilder<GenerationWorker>()
+            .setConstraints(Constraints.Builder().setRequiresStorageNotLow(true).setRequiredNetworkType(network).build())
+            .setInitialDelay(NETWORK_RETRY_DELAY_MINUTES, TimeUnit.MINUTES)
+            .addTag(TAG_GENERATION)
+            .build()
+        workManager.enqueueUniqueWork(GenerationWorker.NETWORK_UNIQUE_NAME, ExistingWorkPolicy.REPLACE, request)
+    }
+
     private companion object {
         const val TAG_ANALYSIS = "analysis"
         const val TAG_GENERATION = "generation"
+        const val NETWORK_RETRY_DELAY_MINUTES = 1L
     }
 }

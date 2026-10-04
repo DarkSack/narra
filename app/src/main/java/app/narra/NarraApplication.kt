@@ -3,6 +3,7 @@ package app.narra
 import android.app.Application
 import androidx.hilt.work.HiltWorkerFactory
 import androidx.work.Configuration
+import app.narra.work.BackgroundPolicy
 import app.narra.work.GenerationNotifications
 import app.narra.work.ProcessingRecovery
 import com.tom_roush.pdfbox.android.PDFBoxResourceLoader
@@ -18,6 +19,8 @@ class NarraApplication : Application(), Configuration.Provider {
 
     @Inject lateinit var notifications: GenerationNotifications
 
+    @Inject lateinit var backgroundPolicy: BackgroundPolicy
+
     override val workManagerConfiguration: Configuration
         get() = Configuration.Builder().setWorkerFactory(workerFactory).build()
 
@@ -26,5 +29,6 @@ class NarraApplication : Application(), Configuration.Provider {
         PDFBoxResourceLoader.init(this)
         notifications.createChannels()
         recovery.resume()
+        backgroundPolicy.register()
     }
 }

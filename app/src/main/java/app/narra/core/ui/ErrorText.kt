@@ -86,6 +86,12 @@ fun ErrorKind.toErrorText(): ErrorText = when (this) {
         action = RecoveryAction.RETRY,
         actionLabel = "Reintentar",
     )
+    ErrorKind.EXPORT_FAILED -> ErrorText(
+        title = "No se pudo exportar",
+        explanation = "No pudimos escribir en la carpeta elegida. Prueba con otra o libera espacio en el teléfono.",
+        action = RecoveryAction.RETRY,
+        actionLabel = "Reintentar",
+    )
     ErrorKind.UNKNOWN -> ErrorText(
         title = "Algo salió mal",
         explanation = "Ocurrió un error inesperado. Lo ya procesado se conserva.",

@@ -160,6 +160,10 @@ private class AndroidTtsSession(private val context: Context) : TtsSession {
         runUtterance(tts, id, timeoutFor(text)) { tts.speak(text, TextToSpeech.QUEUE_FLUSH, Bundle.EMPTY, id) }
     }
 
+    override suspend fun requiresNetwork(voice: VoiceSettings): Boolean = mutex.withLock {
+        prepare(voice).voice?.isNetworkConnectionRequired == true
+    }
+
     override fun stop() {
         engines.values.forEach { it.stop() }
         pending.values.forEach { it.cancel() }

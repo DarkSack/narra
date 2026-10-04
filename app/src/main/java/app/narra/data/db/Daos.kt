@@ -288,9 +288,23 @@ interface JobDao {
     @Query("UPDATE processing_jobs SET state = 'QUEUED' WHERE state = 'RUNNING' AND bookId != :bookId")
     suspend fun requeueOthers(bookId: String)
 
-    /** Siguiente libro de la cola: el que lleva más tiempo esperando. */
-    @Query("SELECT * FROM processing_jobs WHERE state IN ('QUEUED', 'RUNNING') ORDER BY enqueuedAt LIMIT 1")
+    /**
+     * Siguiente libro de la cola: el que lleva más tiempo esperando. Los que esperan conexión
+     * para su voz no bloquean a los demás.
+     */
+    @Query(
+        """SELECT * FROM processing_jobs WHERE state IN ('QUEUED', 'RUNNING')
+           AND (errorKind IS NULL OR errorKind != 'NETWORK') ORDER BY enqueuedAt LIMIT 1""",
+    )
     suspend fun next(): ProcessingJobEntity?
+
+    /** Libros en cola que esperan conexión para su voz. */
+    @Query("SELECT COUNT(*) FROM processing_jobs WHERE state = 'QUEUED' AND errorKind = 'NETWORK'")
+    suspend fun waitingForNetwork(): Int
+
+    /** Vuelve a intentar los que esperaban conexión: quizá ya la hay. */
+    @Query("UPDATE processing_jobs SET errorKind = NULL, errorDetail = NULL WHERE state = 'QUEUED' AND errorKind = 'NETWORK'")
+    suspend fun clearNetworkWaits()
 
     @Upsert
     suspend fun upsert(job: ProcessingJobEntity)

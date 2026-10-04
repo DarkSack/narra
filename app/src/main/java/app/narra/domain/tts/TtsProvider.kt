@@ -35,6 +35,12 @@ interface TtsSession : AutoCloseable {
     /** Dice [text] por el altavoz y vuelve al terminar. Se usa para escuchar una voz antes de elegirla. */
     suspend fun speak(text: String, voice: VoiceSettings)
 
+    /**
+     * Si [voice] necesita conexión para hablar. Un proveedor que solo tiene voces del teléfono
+     * no necesita sobrescribirlo.
+     */
+    suspend fun requiresNetwork(voice: VoiceSettings): Boolean = false
+
     /** Interrumpe lo que esté diciendo o sintetizando. */
     fun stop()
 }

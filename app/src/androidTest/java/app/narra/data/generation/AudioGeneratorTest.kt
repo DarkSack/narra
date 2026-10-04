@@ -12,19 +12,24 @@ import app.narra.data.db.SegmentEntity
 import app.narra.data.db.toJson
 import app.narra.data.files.BookStorage
 import app.narra.data.repository.BookStatsUpdater
+import app.narra.domain.model.AppSettings
 import app.narra.domain.model.BookState
 import app.narra.domain.model.ErrorKind
 import app.narra.domain.model.JobState
 import app.narra.domain.model.NarraException
+import app.narra.domain.model.NetworkPolicy
 import app.narra.domain.model.Paragraph
 import app.narra.domain.model.SegmentState
 import app.narra.domain.model.TtsCapabilities
 import app.narra.domain.model.TtsProviderInfo
 import app.narra.domain.model.Voice
 import app.narra.domain.model.VoiceSettings
+import app.narra.domain.repository.SettingsRepository
 import app.narra.domain.tts.TtsProvider
 import app.narra.domain.tts.TtsProviders
 import app.narra.domain.tts.TtsSession
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.test.runTest
 import org.junit.After
 import org.junit.Assert.assertEquals
@@ -44,6 +49,8 @@ class AudioGeneratorTest {
     private lateinit var db: NarraDatabase
     private lateinit var storage: BookStorage
     private val engine = FakeProvider()
+    private val settings = FakeSettings()
+    private var online = true
 
     @Before
     fun setUp() {
@@ -57,7 +64,15 @@ class AudioGeneratorTest {
         File(context.filesDir, "books/$BOOK").deleteRecursively()
     }
 
-    private fun generator() = AudioGenerator(db, storage, BookStatsUpdater(db), engine, SegmentAudioRenderer(storage))
+    private fun generator() = AudioGenerator(
+        db,
+        storage,
+        BookStatsUpdater(db),
+        engine,
+        SegmentAudioRenderer(storage),
+        settings,
+        { online },
+    )
 
     @Test
     fun generaTodoElLibroYLoMarcaComoTerminado() = runTest {
@@ -107,6 +122,27 @@ class AudioGeneratorTest {
     }
 
     @Test
+    fun unaVozEnLineaEsperaLaConexionSinFallar() = runTest {
+        seed(chapters = 1, segmentsPerChapter = 2)
+        engine.networkVoice = true
+        online = false
+
+        val result = generator().runQueue { }
+
+        assertEquals(QueueResult.NeedsNetwork(NetworkPolicy.WIFI_ONLY), result)
+        val job = db.jobDao().get(BOOK)!!
+        assertEquals(JobState.QUEUED, job.state)
+        assertEquals(ErrorKind.NETWORK, job.errorKind)
+        assertEquals(BookState.GENERATING, db.bookDao().get(BOOK)!!.state)
+        assertEquals(0, engine.calls)
+
+        // Con conexión, la siguiente vuelta lo termina.
+        online = true
+        assertEquals(QueueResult.Idle, generator().runQueue { })
+        assertEquals(BookState.COMPLETED, db.bookDao().get(BOOK)!!.state)
+    }
+
+    @Test
     fun unLibroEnPausaNoSeProcesa() = runTest {
         seed(chapters = 1, segmentsPerChapter = 1)
         db.jobDao().setState(BOOK, JobState.PAUSED)
@@ -147,9 +183,15 @@ class AudioGeneratorTest {
         return ids
     }
 
+    private class FakeSettings : SettingsRepository {
+        override val settings = MutableStateFlow(AppSettings())
+        override suspend fun update(transform: (AppSettings) -> AppSettings) = settings.update(transform)
+    }
+
     private class FakeProvider : TtsProviders, TtsProvider, TtsSession {
         var failure: NarraException? = null
         var calls = 0
+        var networkVoice = false
 
         override val all: List<TtsProvider> get() = listOf(this)
         override fun get(id: String): TtsProvider? = this.takeIf { id == ID }
@@ -162,6 +204,7 @@ class AudioGeneratorTest {
         override suspend fun speak(text: String, voice: VoiceSettings) = Unit
         override fun stop() = Unit
         override fun close() = Unit
+        override suspend fun requiresNetwork(voice: VoiceSettings) = networkVoice
 
         override suspend fun synthesize(text: String, voice: VoiceSettings, target: File) {
             calls++

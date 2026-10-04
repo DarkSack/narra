@@ -17,11 +17,12 @@ import app.narra.MainActivity
 import app.narra.R
 import app.narra.core.ui.toErrorText
 import app.narra.data.generation.GenerationEvent
+import app.narra.domain.model.ErrorKind
 import dagger.hilt.android.qualifiers.ApplicationContext
 import javax.inject.Inject
 import javax.inject.Singleton
 
-/** Notificaciones de la generación de audio: progreso en curso y aviso al terminar o fallar. */
+/** Notificaciones del trabajo en segundo plano (crear, reconocer, exportar): progreso y aviso al terminar o fallar. */
 @Singleton
 class GenerationNotifications @Inject constructor(@ApplicationContext private val context: Context) {
     private val manager = NotificationManagerCompat.from(context)
@@ -85,6 +86,50 @@ class GenerationNotifications @Inject constructor(@ApplicationContext private va
         return ForegroundInfo(NOTIFICATION_RECOGNITION, builder.build(), foregroundType())
     }
 
+    /** Notificación en primer plano mientras se exporta el audio de un libro. */
+    fun exportInfo(bookId: String, title: String, done: Int, total: Int): ForegroundInfo {
+        val builder = NotificationCompat.Builder(context, CHANNEL_PROGRESS)
+            .setSmallIcon(R.drawable.ic_notification)
+            .setOngoing(true)
+            .setOnlyAlertOnce(true)
+            .setSilent(true)
+            .setCategory(NotificationCompat.CATEGORY_PROGRESS)
+            .setForegroundServiceBehavior(NotificationCompat.FOREGROUND_SERVICE_IMMEDIATE)
+            .setContentTitle(if (title.isBlank()) "Exportando el audio" else "Exportando «$title»")
+            .setProgress(total, done, total == 0)
+        if (total > 0) builder.setContentText("$done de $total capítulos")
+        if (bookId.isNotEmpty()) builder.setContentIntent(openBook(bookId))
+        return ForegroundInfo(NOTIFICATION_EXPORT_PROGRESS, builder.build(), foregroundType())
+    }
+
+    fun exported(bookId: String, title: String, folderName: String, files: Int) = post(
+        bookId,
+        NotificationCompat.Builder(context, CHANNEL_RESULTS)
+            .setSmallIcon(R.drawable.ic_notification)
+            .setContentTitle("«$title» se exportó")
+            .setContentText(if (files == 1) "1 archivo M4A en «$folderName»" else "$files archivos M4A en «$folderName»")
+            .setAutoCancel(true)
+            .setContentIntent(openBook(bookId))
+            .build(),
+        NOTIFICATION_EXPORT_RESULT,
+    )
+
+    fun exportFailed(bookId: String, title: String, kind: ErrorKind) {
+        val error = kind.toErrorText()
+        post(
+            bookId,
+            NotificationCompat.Builder(context, CHANNEL_RESULTS)
+                .setSmallIcon(R.drawable.ic_notification)
+                .setContentTitle("«$title»: ${error.title}")
+                .setContentText(error.explanation)
+                .setStyle(NotificationCompat.BigTextStyle().bigText(error.explanation))
+                .setAutoCancel(true)
+                .setContentIntent(openBook(bookId))
+                .build(),
+            NOTIFICATION_EXPORT_RESULT,
+        )
+    }
+
     fun finished(event: GenerationEvent.Finished) = post(
         event.bookId,
         NotificationCompat.Builder(context, CHANNEL_RESULTS)
@@ -114,10 +159,10 @@ class GenerationNotifications @Inject constructor(@ApplicationContext private va
     /** Quita el aviso de un libro (por ejemplo, al volver a generarlo). */
     fun dismiss(bookId: String) = manager.cancel(bookId, NOTIFICATION_RESULT)
 
-    private fun post(bookId: String, notification: Notification) {
+    private fun post(bookId: String, notification: Notification, id: Int = NOTIFICATION_RESULT) {
         val granted = Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU ||
             ContextCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS) == PackageManager.PERMISSION_GRANTED
-        if (granted) manager.notify(bookId, NOTIFICATION_RESULT, notification)
+        if (granted) manager.notify(bookId, id, notification)
     }
 
     private fun openBook(bookId: String): PendingIntent = PendingIntent.getActivity(
@@ -155,6 +200,8 @@ class GenerationNotifications @Inject constructor(@ApplicationContext private va
         const val NOTIFICATION_PROGRESS = 2001
         const val NOTIFICATION_RESULT = 2002
         const val NOTIFICATION_RECOGNITION = 2003
+        const val NOTIFICATION_EXPORT_PROGRESS = 2004
+        const val NOTIFICATION_EXPORT_RESULT = 2005
         const val NO_FOREGROUND_TYPE = 0
     }
 }

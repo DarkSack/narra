@@ -70,14 +70,17 @@ import app.narra.core.designsystem.theme.NarraTheme
 import app.narra.domain.model.AppSettings
 import app.narra.presentation.AppEvent
 import app.narra.presentation.AppViewModel
+import app.narra.presentation.about.LicensesScreen
 import app.narra.presentation.book.BookDetailsScreen
 import app.narra.presentation.components.MiniPlayer
 import app.narra.presentation.home.HomeScreen
 import app.narra.presentation.importing.ImportScreen
 import app.narra.presentation.library.LibraryScreen
+import app.narra.presentation.onboarding.OnboardingScreen
 import app.narra.presentation.player.PlayerScreen
 import app.narra.presentation.processing.ProcessingScreen
 import app.narra.presentation.settings.SettingsScreen
+import app.narra.presentation.storage.StorageScreen
 import app.narra.presentation.text.ChapterTextScreen
 import app.narra.presentation.voices.VoicesScreen
 import kotlin.reflect.KClass
@@ -113,6 +116,8 @@ fun NarraApp(viewModel: AppViewModel, settings: AppSettings) {
         val miniPlayer by viewModel.miniPlayer.collectAsStateWithLifecycle()
         val importing by viewModel.importing.collectAsStateWithLifecycle()
         var duplicate by remember { mutableStateOf<AppEvent.Duplicate?>(null) }
+        // Solo cuenta al abrir la app: completar la introducción no debe rehacer el grafo.
+        val startWithOnboarding = remember { !settings.onboardingCompleted }
 
         val picker = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri: Uri? ->
             if (uri != null) viewModel.importPdf(uri)
@@ -169,7 +174,12 @@ fun NarraApp(viewModel: AppViewModel, settings: AppSettings) {
                         LocalSharedTransitionScope provides this,
                         LocalBottomOverlayPadding provides bottomOverlay,
                     ) {
-                        NarraNavHost(navController, onImport)
+                        NarraNavHost(
+                            navController = navController,
+                            startWithOnboarding = startWithOnboarding,
+                            onImport = onImport,
+                            onOnboardingDone = viewModel::completeOnboarding,
+                        )
                     }
                 }
 
@@ -225,7 +235,12 @@ fun NarraApp(viewModel: AppViewModel, settings: AppSettings) {
 }
 
 @Composable
-private fun NarraNavHost(navController: NavHostController, onImport: () -> Unit) {
+private fun NarraNavHost(
+    navController: NavHostController,
+    startWithOnboarding: Boolean,
+    onImport: () -> Unit,
+    onOnboardingDone: () -> Unit,
+) {
     val fadeMillis = NarraTheme.tokens.transitionMillis
     val reduceMotion = NarraTheme.reduceMotion
     val enter: EnterTransition = if (reduceMotion) EnterTransition.None else fadeIn(tween(fadeMillis))
@@ -238,12 +253,26 @@ private fun NarraNavHost(navController: NavHostController, onImport: () -> Unit)
 
     NavHost(
         navController = navController,
-        startDestination = HomeRoute,
+        startDestination = if (startWithOnboarding) OnboardingRoute else HomeRoute,
         enterTransition = { enter },
         exitTransition = { exit },
         popEnterTransition = { enter },
         popExitTransition = { exit },
     ) {
+        composable<OnboardingRoute> {
+            OnboardingScreen(
+                onFinish = { importNow ->
+                    onOnboardingDone()
+                    // Desde Ajustes se vuelve atrás; en el primer arranque, la introducción deja paso al inicio.
+                    if (navController.previousBackStackEntry != null) {
+                        navController.popBackStack()
+                    } else {
+                        navController.navigate(HomeRoute) { popUpTo<OnboardingRoute> { inclusive = true } }
+                    }
+                    if (importNow) onImport()
+                },
+            )
+        }
         composable<HomeRoute> {
             ProvideNavAnimatedScope(this) {
                 HomeScreen(
@@ -265,7 +294,9 @@ private fun NarraNavHost(navController: NavHostController, onImport: () -> Unit)
             ProvideNavAnimatedScope(this) {
                 SettingsScreen(
                     onChooseDefaultVoice = { navController.navigate(VoicesRoute()) { launchSingleTop = true } },
-                    onOpenLicenses = null,
+                    onOpenStorage = { navController.navigate(StorageRoute) { launchSingleTop = true } },
+                    onOpenLicenses = { navController.navigate(LicensesRoute) { launchSingleTop = true } },
+                    onShowIntroduction = { navController.navigate(OnboardingRoute) { launchSingleTop = true } },
                 )
             }
         }
@@ -304,6 +335,12 @@ private fun NarraNavHost(navController: NavHostController, onImport: () -> Unit)
                 onOpenProcessing = { id -> navController.navigate(ProcessingRoute(id)) { popUpTo<ProcessingRoute> { inclusive = true } } },
                 onChooseVoice = chooseVoice,
             )
+        }
+        composable<StorageRoute> {
+            StorageScreen(onBack = { navController.popBackStack() }, onOpenBook = openBook)
+        }
+        composable<LicensesRoute> {
+            LicensesScreen(onBack = { navController.popBackStack() })
         }
         composable<ChapterTextRoute> {
             ChapterTextScreen(onBack = { navController.popBackStack() })

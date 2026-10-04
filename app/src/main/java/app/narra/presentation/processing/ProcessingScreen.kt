@@ -65,7 +65,9 @@ import app.narra.core.ui.toErrorText
 import app.narra.domain.model.BookState
 import app.narra.domain.model.Chapter
 import app.narra.domain.model.ChapterState
+import app.narra.domain.model.ErrorKind
 import app.narra.domain.model.JobState
+import app.narra.domain.model.ProcessingJob
 import app.narra.presentation.common.chapterLabel
 import app.narra.presentation.common.openStorageSettings
 import app.narra.presentation.common.openVoiceInstaller
@@ -196,7 +198,7 @@ fun ProcessingScreen(
                     QueueRow(
                         position = index + 1,
                         title = entry.book.title,
-                        status = entry.job.state.label(),
+                        status = entry.job.label(),
                         isThis = entry.book.id == book.id,
                         onClick = { if (entry.book.id != book.id) onOpenProcessing(entry.book.id) },
                     )
@@ -360,6 +362,8 @@ private fun QueueRow(position: Int, title: String, status: String, isThis: Boole
         }
     }
 }
+
+private fun ProcessingJob.label(): String = if (state == JobState.QUEUED && error?.kind == ErrorKind.NETWORK) "Esperando conexión" else state.label()
 
 private fun JobState.label(): String = when (this) {
     JobState.RUNNING -> "Creándose ahora"

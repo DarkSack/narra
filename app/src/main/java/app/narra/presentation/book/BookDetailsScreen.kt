@@ -1,7 +1,10 @@
 package app.narra.presentation.book
 
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.animateContentSize
+import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -29,6 +32,7 @@ import androidx.compose.material.icons.rounded.MoreVert
 import androidx.compose.material.icons.rounded.Pause
 import androidx.compose.material.icons.rounded.PlayArrow
 import androidx.compose.material.icons.rounded.RecordVoiceOver
+import androidx.compose.material.icons.rounded.SaveAlt
 import androidx.compose.material.icons.rounded.StopCircle
 import androidx.compose.material.icons.rounded.Tune
 import androidx.compose.material3.AlertDialog
@@ -38,10 +42,12 @@ import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
@@ -87,6 +93,7 @@ import app.narra.core.ui.languageLabel
 import app.narra.core.ui.toErrorText
 import app.narra.domain.model.Book
 import app.narra.domain.model.BookState
+import app.narra.domain.model.ExportStatus
 import app.narra.presentation.common.metaLine
 import app.narra.presentation.common.openStorageSettings
 import app.narra.presentation.common.openVoiceInstaller
@@ -111,7 +118,11 @@ fun BookDetailsScreen(
     viewModel: BookDetailsViewModel = hiltViewModel(),
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
+    val export by viewModel.export.collectAsStateWithLifecycle()
     val snackbar = remember { SnackbarHostState() }
+    val chooseFolder = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocumentTree()) { folder ->
+        if (folder != null) viewModel.export(folder)
+    }
     val scope = rememberCoroutineScope()
     val context = LocalContext.current
     var confirm by remember { mutableStateOf<DeleteKind?>(null) }
@@ -126,6 +137,8 @@ fun BookDetailsScreen(
     }
 
     val book = state.book
+    val playable = book?.hasPlayableAudio
+    LaunchedEffect(playable) { if (playable != null) viewModel.onPlayableChanged(playable) }
     Scaffold(
         topBar = {
             TopAppBar(
@@ -147,6 +160,7 @@ fun BookDetailsScreen(
                             onEdit = onEdit?.let { { it(book.id) } },
                             onChooseVoice = onChooseVoice?.let { { it(book.id) } },
                             onStopGeneration = viewModel::cancelGeneration.takeIf { state.isGenerating },
+                            onExport = { chooseFolder.launch(null) }.takeIf { state.canExport && export !is ExportStatus.Running },
                             onDeleteAudio = { confirm = DeleteKind.AUDIO },
                             onDeleteBook = { confirm = DeleteKind.BOOK },
                         )
@@ -171,6 +185,7 @@ fun BookDetailsScreen(
             else -> BookDetailsContent(
                 state = state,
                 book = book,
+                export = export,
                 contentPadding = padding,
                 onPlay = { viewModel.play(); if (!state.isPlayingThisBook) onOpenPlayer() },
                 onPlayChapter = viewModel::playChapter,
@@ -211,6 +226,7 @@ private enum class DeleteKind { AUDIO, BOOK }
 private fun BookDetailsContent(
     state: BookDetailsUiState,
     book: Book,
+    export: ExportStatus?,
     contentPadding: PaddingValues,
     onPlay: () -> Unit,
     onPlayChapter: (app.narra.domain.model.Chapter) -> Unit,
@@ -296,6 +312,10 @@ private fun BookDetailsContent(
                     modifier = Modifier.padding(horizontal = tokens.screenPadding, vertical = 8.dp),
                 )
             }
+        }
+
+        (export as? ExportStatus.Running)?.let { running ->
+            item(key = "export") { ExportProgress(running, Modifier.padding(horizontal = tokens.screenPadding, vertical = 8.dp)) }
         }
 
         book.metadata.description?.takeIf { it.isNotBlank() }?.let { description ->
@@ -442,6 +462,7 @@ private fun OverflowMenu(
     onEdit: (() -> Unit)?,
     onChooseVoice: (() -> Unit)?,
     onStopGeneration: (() -> Unit)?,
+    onExport: (() -> Unit)?,
     onDeleteAudio: () -> Unit,
     onDeleteBook: () -> Unit,
 ) {
@@ -470,6 +491,13 @@ private fun OverflowMenu(
                     onClick = { expanded = false; it() },
                 )
             }
+            onExport?.let {
+                DropdownMenuItem(
+                    text = { Text("Exportar audio") },
+                    leadingIcon = { Icon(Icons.Rounded.SaveAlt, contentDescription = null) },
+                    onClick = { expanded = false; it() },
+                )
+            }
             if (book.audioSizeBytes > 0 || book.hasPlayableAudio) {
                 DropdownMenuItem(
                     text = { Text("Eliminar solo el audio") },
@@ -482,6 +510,29 @@ private fun OverflowMenu(
                 leadingIcon = { Icon(Icons.Rounded.DeleteForever, contentDescription = null, tint = MaterialTheme.colorScheme.error) },
                 onClick = { expanded = false; onDeleteBook() },
             )
+        }
+    }
+}
+
+/** Avance de la exportación: se ve en la ficha además de en la notificación. */
+@Composable
+private fun ExportProgress(status: ExportStatus.Running, modifier: Modifier = Modifier) {
+    val fraction = if (status.total > 0) status.done.toFloat() / status.total else null
+    Surface(shape = MaterialTheme.shapes.large, color = MaterialTheme.colorScheme.surfaceContainer, modifier = modifier.fillMaxWidth()) {
+        Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                Icon(Icons.Rounded.SaveAlt, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
+                Text(
+                    if (status.total > 0) "Exportando el audio · ${status.done} de ${status.total} capítulos" else "Preparando la exportación",
+                    style = MaterialTheme.typography.bodyMedium,
+                )
+            }
+            if (fraction == null) {
+                LinearProgressIndicator(Modifier.fillMaxWidth())
+            } else {
+                val animated by animateFloatAsState(fraction, narraTween(), label = "export")
+                LinearProgressIndicator(progress = { animated }, modifier = Modifier.fillMaxWidth())
+            }
         }
     }
 }

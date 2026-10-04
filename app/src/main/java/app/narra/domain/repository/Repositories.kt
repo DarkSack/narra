@@ -7,10 +7,12 @@ import app.narra.domain.model.Book
 import app.narra.domain.model.BookMetadata
 import app.narra.domain.model.Chapter
 import app.narra.domain.model.ErrorKind
+import app.narra.domain.model.ExportStatus
 import app.narra.domain.model.ListeningProgress
 import app.narra.domain.model.Paragraph
 import app.narra.domain.model.PlayableTrack
 import app.narra.domain.model.ProcessingJob
+import app.narra.domain.model.StorageUsage
 import app.narra.domain.model.VoiceSettings
 import kotlinx.coroutines.flow.Flow
 
@@ -107,4 +109,20 @@ interface ProcessingQueue {
 
     /** Arranca el procesador si quedaron trabajos pendientes (por ejemplo, tras reiniciar el teléfono). */
     suspend fun resumePending()
+}
+
+/** Copia el audio de un libro fuera de la app, a una carpeta que elige el usuario. */
+interface AudiobookExports {
+    /** [folder] es una carpeta elegida con el selector del sistema (ACTION_OPEN_DOCUMENT_TREE). */
+    fun export(bookId: String, folder: Uri)
+
+    /** Última exportación de [bookId]; null si no hay ninguna o se canceló. */
+    fun observe(bookId: String): Flow<ExportStatus?>
+}
+
+interface StorageRepository {
+    suspend fun usage(): StorageUsage
+
+    /** Borra los temporales que nada está usando. Devuelve los bytes liberados. */
+    suspend fun clearTemporaryFiles(): Long
 }
