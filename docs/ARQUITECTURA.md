@@ -86,6 +86,7 @@ audio/              WAV → AAC/M4A (MediaCodec + MediaMuxer), silencios, export
 processing/         workers de WorkManager, cola, notificaciones
 playback/           MediaSessionService + ExoPlayer, temporizador, conexión desde la UI
 presentation/       navegación y pantallas (cada una con ViewModel + UiState)
+update/             AppUpdater, uno por canal: src/interna (GitHub Releases) y src/play (Play In-App Updates)
 ```
 
 Inyección de dependencias con **Hilt**. Ajustes con **DataStore**. Imágenes con **Coil 3**.

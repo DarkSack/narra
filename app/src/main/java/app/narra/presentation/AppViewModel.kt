@@ -14,6 +14,7 @@ import app.narra.domain.repository.SettingsRepository
 import app.narra.playback.PlaybackController
 import app.narra.playback.PlaybackPosition
 import app.narra.presentation.components.MiniPlayerState
+import app.narra.update.AppUpdater
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -50,7 +51,13 @@ class AppViewModel @Inject constructor(
     private val playbackRepository: PlaybackRepository,
     private val playback: PlaybackController,
     private val importRepository: ImportRepository,
+    private val updater: AppUpdater,
 ) : ViewModel() {
+
+    /** Hay una versión nueva de Narra descargada, lista para instalarse. */
+    val updateReady: StateFlow<Boolean> = updater.ready
+
+    fun installUpdate() = updater.install()
 
     /** `null` hasta leer los ajustes: evita mostrar un tema equivocado durante un instante. */
     val settings: StateFlow<AppSettings?> = settingsRepository.settings

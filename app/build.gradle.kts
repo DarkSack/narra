@@ -33,6 +33,20 @@ android {
         }
     }
 
+    // Cada canal trae su propio AppUpdater: Play prohíbe que una app suya se actualice por fuera
+    // de la tienda (y el permiso para instalar APK), así que el autoactualizador va solo en "interna".
+    flavorDimensions += "canal"
+    productFlavors {
+        create("interna") {
+            dimension = "canal"
+            // Misma llave que firmó la 3.0.0 repartida a mano: si cambia, la actualización no se instala.
+            signingConfig = signingConfigs.getByName("debug")
+        }
+        create("play") {
+            dimension = "canal"
+        }
+    }
+
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17
@@ -119,6 +133,8 @@ dependencies {
 
     implementation(libs.pdfbox.android)
     implementation(libs.mlkit.text.recognition)
+
+    "playImplementation"(libs.play.app.update)
 
     testImplementation(libs.junit)
     testImplementation(libs.kotlinx.coroutines.test)

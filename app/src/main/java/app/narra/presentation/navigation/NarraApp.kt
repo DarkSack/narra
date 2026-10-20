@@ -116,6 +116,8 @@ fun NarraApp(viewModel: AppViewModel, settings: AppSettings) {
         val miniPlayer by viewModel.miniPlayer.collectAsStateWithLifecycle()
         val importing by viewModel.importing.collectAsStateWithLifecycle()
         var duplicate by remember { mutableStateOf<AppEvent.Duplicate?>(null) }
+        val updateReady by viewModel.updateReady.collectAsStateWithLifecycle()
+        var updatePostponed by remember { mutableStateOf(false) }
         // Solo cuenta al abrir la app: completar la introducción no debe rehacer el grafo.
         val startWithOnboarding = remember { !settings.onboardingCompleted }
 
@@ -233,6 +235,24 @@ fun NarraApp(viewModel: AppViewModel, settings: AppSettings) {
                         duplicate = null
                         viewModel.importPdf(event.uri, allowDuplicate = true)
                     }) { Text("Importar de nuevo") }
+                },
+            )
+        }
+
+        // «Más tarde» vale hasta la próxima vez que se abra Narra.
+        if (updateReady && !updatePostponed) {
+            AlertDialog(
+                onDismissRequest = { updatePostponed = true },
+                title = { Text("Hay una versión nueva de Narra") },
+                text = { Text("Ya está descargada. Al instalarla, Narra se cierra un momento; tus libros y tu progreso se conservan.") },
+                confirmButton = {
+                    TextButton(onClick = {
+                        updatePostponed = true
+                        viewModel.installUpdate()
+                    }) { Text("Instalar") }
+                },
+                dismissButton = {
+                    TextButton(onClick = { updatePostponed = true }) { Text("Más tarde") }
                 },
             )
         }

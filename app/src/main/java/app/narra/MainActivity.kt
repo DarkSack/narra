@@ -19,6 +19,7 @@ import app.narra.domain.model.ThemeMode
 import app.narra.playback.PlaybackController
 import app.narra.presentation.AppViewModel
 import app.narra.presentation.navigation.NarraApp
+import app.narra.update.AppUpdater
 import dagger.hilt.android.AndroidEntryPoint
 import javax.inject.Inject
 
@@ -26,6 +27,8 @@ import javax.inject.Inject
 class MainActivity : ComponentActivity() {
 
     @Inject lateinit var playback: PlaybackController
+
+    @Inject lateinit var updater: AppUpdater
 
     private val viewModel: AppViewModel by viewModels()
 
@@ -51,8 +54,11 @@ class MainActivity : ComponentActivity() {
             }
             NarraApp(viewModel, current)
         }
-        // Al recrearse (p. ej. al girar) el intent ya se atendió.
-        if (savedInstanceState == null) handleIntent(intent)
+        // Al recrearse (p. ej. al girar) el intent ya se atendió y la versión nueva ya se buscó.
+        if (savedInstanceState == null) {
+            handleIntent(intent)
+            updater.check(this)
+        }
     }
 
     override fun onNewIntent(intent: Intent) {
