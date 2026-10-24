@@ -153,6 +153,7 @@ dependencies {
     implementation(libs.mlkit.text.recognition)
 
     "playImplementation"(libs.play.app.update)
+    "playImplementation"(libs.play.billing)
 
     testImplementation(libs.junit)
     testImplementation(libs.kotlinx.coroutines.test)

@@ -1,6 +1,7 @@
 package app.narra.presentation.navigation
 
 import android.net.Uri
+import androidx.activity.compose.LocalActivity
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.AnimatedVisibility
@@ -83,6 +84,9 @@ import app.narra.presentation.settings.SettingsScreen
 import app.narra.presentation.storage.StorageScreen
 import app.narra.presentation.text.ChapterTextScreen
 import app.narra.presentation.voices.VoicesScreen
+import app.narra.plus.LocalPlus
+import app.narra.plus.PlusAccess
+import app.narra.plus.PlusDialog
 import kotlin.reflect.KClass
 
 /**
@@ -118,6 +122,11 @@ fun NarraApp(viewModel: AppViewModel, settings: AppSettings) {
         var duplicate by remember { mutableStateOf<AppEvent.Duplicate?>(null) }
         val updateReady by viewModel.updateReady.collectAsStateWithLifecycle()
         var updatePostponed by remember { mutableStateOf(false) }
+        val plusActive by viewModel.plusActive.collectAsStateWithLifecycle()
+        val plusPrice by viewModel.plusPrice.collectAsStateWithLifecycle()
+        var offeringPlus by remember { mutableStateOf(false) }
+        val plusAccess = remember(plusActive) { PlusAccess(plusActive) { offeringPlus = true } }
+        val activity = LocalActivity.current
         // Solo cuenta al abrir la app: completar la introducción no debe rehacer el grafo.
         val startWithOnboarding = remember { !settings.onboardingCompleted }
 
@@ -133,6 +142,7 @@ fun NarraApp(viewModel: AppViewModel, settings: AppSettings) {
                     is AppEvent.ShowBook -> navController.navigate(BookRoute(event.bookId)) { launchSingleTop = true }
                     is AppEvent.Duplicate -> duplicate = event
                     AppEvent.OpenPlayer -> navController.navigate(PlayerRoute) { launchSingleTop = true }
+                    AppEvent.NeedPlus -> offeringPlus = true
                     is AppEvent.ImportFailed -> {
                         val result = snackbar.showSnackbar(
                             message = "${event.error.title}. ${event.error.explanation}",
@@ -180,6 +190,7 @@ fun NarraApp(viewModel: AppViewModel, settings: AppSettings) {
                     CompositionLocalProvider(
                         LocalSharedTransitionScope provides this,
                         LocalBottomOverlayPadding provides bottomOverlay,
+                        LocalPlus provides plusAccess,
                     ) {
                         NarraNavHost(
                             navController = navController,
@@ -236,6 +247,21 @@ fun NarraApp(viewModel: AppViewModel, settings: AppSettings) {
                         viewModel.importPdf(event.uri, allowDuplicate = true)
                     }) { Text("Importar de nuevo") }
                 },
+            )
+        }
+
+        // La compra se completa en la hoja de Google Play: al volver, Plus ya está activo.
+        LaunchedEffect(plusActive) {
+            if (plusActive && offeringPlus) {
+                offeringPlus = false
+                snackbar.showSnackbar("Narra Plus está activo. ¡Gracias por apoyar Narra!")
+            }
+        }
+        if (offeringPlus && !plusActive) {
+            PlusDialog(
+                price = plusPrice,
+                onBuy = { activity?.let(viewModel::buyPlus) },
+                onDismiss = { offeringPlus = false },
             )
         }
 

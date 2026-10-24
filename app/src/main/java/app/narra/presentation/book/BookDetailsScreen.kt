@@ -101,6 +101,7 @@ import app.narra.presentation.components.BookStatusPill
 import app.narra.presentation.components.ChapterRow
 import app.narra.presentation.components.ProcessingCard
 import app.narra.presentation.navigation.LocalBottomOverlayPadding
+import app.narra.plus.LocalPlus
 import kotlinx.coroutines.launch
 
 /**
@@ -126,6 +127,7 @@ fun BookDetailsScreen(
     val scope = rememberCoroutineScope()
     val context = LocalContext.current
     var confirm by remember { mutableStateOf<DeleteKind?>(null) }
+    val plus = LocalPlus.current
 
     LaunchedEffect(viewModel) {
         viewModel.events.collect { event ->
@@ -160,7 +162,7 @@ fun BookDetailsScreen(
                             onEdit = onEdit?.let { { it(book.id) } },
                             onChooseVoice = onChooseVoice?.let { { it(book.id) } },
                             onStopGeneration = viewModel::cancelGeneration.takeIf { state.isGenerating },
-                            onExport = { chooseFolder.launch(null) }.takeIf { state.canExport && export !is ExportStatus.Running },
+                            onExport = { plus.require { chooseFolder.launch(null) } }.takeIf { state.canExport && export !is ExportStatus.Running },
                             onDeleteAudio = { confirm = DeleteKind.AUDIO },
                             onDeleteBook = { confirm = DeleteKind.BOOK },
                         )

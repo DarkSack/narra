@@ -17,6 +17,7 @@ import androidx.compose.runtime.getValue
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import app.narra.domain.model.ThemeMode
 import app.narra.playback.PlaybackController
+import app.narra.plus.Plus
 import app.narra.presentation.AppViewModel
 import app.narra.presentation.navigation.NarraApp
 import app.narra.update.AppUpdater
@@ -29,6 +30,8 @@ class MainActivity : ComponentActivity() {
     @Inject lateinit var playback: PlaybackController
 
     @Inject lateinit var updater: AppUpdater
+
+    @Inject lateinit var plus: Plus
 
     private val viewModel: AppViewModel by viewModels()
 
@@ -69,6 +72,7 @@ class MainActivity : ComponentActivity() {
     override fun onStart() {
         super.onStart()
         playback.connect()
+        plus.refresh()
     }
 
     override fun onStop() {

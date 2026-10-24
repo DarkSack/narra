@@ -76,6 +76,8 @@ import app.narra.domain.model.UiStyle
 import app.narra.presentation.common.summary
 import app.narra.presentation.components.label
 import app.narra.presentation.navigation.LocalBottomOverlayPadding
+import app.narra.plus.FREE_BOOK_LIMIT
+import app.narra.plus.LocalPlus
 import kotlin.math.roundToInt
 
 @Composable
@@ -107,6 +109,25 @@ fun SettingsScreen(
                 style = if (tokens.editorial) MaterialTheme.typography.displaySmall else MaterialTheme.typography.headlineMedium,
                 modifier = Modifier.padding(horizontal = tokens.screenPadding, vertical = 16.dp).semantics { heading() },
             )
+        }
+
+        item { Group("Narra Plus") }
+        item {
+            val plus = LocalPlus.current
+            if (plus.active) {
+                ListItem(
+                    headlineContent = { Text("Narra Plus está activo") },
+                    supportingContent = { Text("Libros sin límite, exportar el audio y reconocer PDF escaneados") },
+                    colors = ListItemDefaults.colors(containerColor = Color.Transparent),
+                    modifier = Modifier.padding(horizontal = tokens.screenPadding - 16.dp),
+                )
+            } else {
+                NavigationSetting(
+                    "Desbloquear Narra Plus",
+                    "Más de $FREE_BOOK_LIMIT libros, exportar el audio y reconocer PDF escaneados. Un solo pago.",
+                    plus.offer,
+                )
+            }
         }
 
         item { Group("Apariencia") }
@@ -299,7 +320,9 @@ private fun PrivacyDialog(onDismiss: () -> Unit) {
                     "Las voces del teléfono funcionan sin conexión. Si eliges una voz marcada «en línea», el motor de voz " +
                     "de su fabricante recibe el texto para leerlo.\n\n" +
                     "El reconocimiento de páginas escaneadas usa ML Kit de Google en el propio teléfono: las páginas no " +
-                    "salen de él, aunque ML Kit puede enviar a Google estadísticas de uso y rendimiento de la función.",
+                    "salen de él, aunque ML Kit puede enviar a Google estadísticas de uso y rendimiento de la función.\n\n" +
+                    "Narra también se conecta para buscar versiones nuevas y, en Google Play, para la compra de " +
+                    "Narra Plus, que procesa Google. Ninguna de las dos envía tus libros.",
             )
         },
         confirmButton = { TextButton(onClick = onDismiss) { Text("Entendido") } },

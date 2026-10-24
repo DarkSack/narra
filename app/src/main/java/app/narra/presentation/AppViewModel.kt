@@ -1,5 +1,6 @@
 package app.narra.presentation
 
+import android.app.Activity
 import android.net.Uri
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -13,6 +14,8 @@ import app.narra.domain.repository.PlaybackRepository
 import app.narra.domain.repository.SettingsRepository
 import app.narra.playback.PlaybackController
 import app.narra.playback.PlaybackPosition
+import app.narra.plus.FREE_BOOK_LIMIT
+import app.narra.plus.Plus
 import app.narra.presentation.components.MiniPlayerState
 import app.narra.update.AppUpdater
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -23,6 +26,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.map
@@ -41,6 +45,9 @@ sealed interface AppEvent {
     data class Duplicate(val uri: Uri, val bookId: String, val title: String) : AppEvent
     data class ImportFailed(val error: ErrorText) : AppEvent
     data object OpenPlayer : AppEvent
+
+    /** La biblioteca llegó al límite gratuito: se ofrece Narra Plus. */
+    data object NeedPlus : AppEvent
 }
 
 /** Estado global de la interfaz: ajustes (tema, estilo) y el mini reproductor. */
@@ -52,7 +59,13 @@ class AppViewModel @Inject constructor(
     private val playback: PlaybackController,
     private val importRepository: ImportRepository,
     private val updater: AppUpdater,
+    private val plus: Plus,
 ) : ViewModel() {
+
+    val plusActive: StateFlow<Boolean> = plus.active
+    val plusPrice: StateFlow<String?> = plus.price
+
+    fun buyPlus(activity: Activity) = plus.buy(activity)
 
     /** Hay una versión nueva de Narra descargada, lista para instalarse. */
     val updateReady: StateFlow<Boolean> = updater.ready
@@ -106,6 +119,11 @@ class AppViewModel @Inject constructor(
         if (_importing.value) return
         _importing.value = true
         viewModelScope.launch {
+            if (!plus.active.value && bookRepository.observeBooks().first().size >= FREE_BOOK_LIMIT) {
+                _importing.value = false
+                _events.send(AppEvent.NeedPlus)
+                return@launch
+            }
             val result = importRepository.importPdf(uri, allowDuplicate)
             _importing.value = false
             _events.send(

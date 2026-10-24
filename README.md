@@ -24,12 +24,24 @@ diseño están descritos en [docs/ARQUITECTURA.md](docs/ARQUITECTURA.md).
 
 Requiere JDK 17 y el SDK de Android (compileSdk 36).
 
-La app tiene dos canales de distribución (flavors), que solo cambian cómo se actualiza:
+La app tiene dos canales de distribución (flavors), que cambian cómo se actualiza y si se cobra
+Narra Plus:
 
-| Canal | Para | Actualización |
-|---|---|---|
-| `interna` | APK que se reparte a mano | Busca en GitHub Releases al abrir y una vez al día, descarga con Wi-Fi y avisa para instalar |
-| `play` | Google Play | Actualización flexible de Play: aviso de Play, descarga en segundo plano y botón para reiniciar |
+| Canal | Para | Actualización | Narra Plus |
+|---|---|---|---|
+| `interna` | APK que se reparte a mano | Busca en GitHub Releases al abrir y una vez al día, descarga con Wi-Fi y avisa para instalar | Siempre activo |
+| `play` | Google Play | Actualización flexible de Play: aviso de Play, descarga en segundo plano y botón para reiniciar | Compra única con Google Play Billing |
+
+**Narra Plus** desbloquea libros sin límite (sin Plus caben 3), exportar el audio y reconocer PDF
+escaneados. Para venderlo en Play:
+
+1. En Play Console, configura el perfil de pagos (cuenta de comerciante).
+2. Sube un bundle de esta versión o posterior a un canal de prueba: Play solo deja crear productos
+   cuando la app ya trae la librería de compras.
+3. En *Monetizar → Productos → Productos únicos*, crea uno con el ID **`narra_plus`**, ponle precio
+   y actívalo.
+4. Para probar sin pagar, añade tu cuenta en *Configuración → Pruebas de licencia* e instala la app
+   desde el canal de prueba.
 
 ```bash
 ./gradlew :app:assembleInternaDebug

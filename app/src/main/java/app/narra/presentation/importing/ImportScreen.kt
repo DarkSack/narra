@@ -112,6 +112,7 @@ import app.narra.presentation.common.chapterLabel
 import app.narra.presentation.common.explanation
 import app.narra.presentation.common.highlights
 import app.narra.presentation.common.summary
+import app.narra.plus.LocalPlus
 
 /**
  * Del PDF recién elegido al libro listo para convertir: muestra el análisis en curso y, al
@@ -129,6 +130,7 @@ fun ImportScreen(
     val snackbar = remember { SnackbarHostState() }
     var confirmDelete by remember { mutableStateOf(false) }
     var choosingOcrPages by remember { mutableStateOf(false) }
+    val plus = LocalPlus.current
     // El aviso de "tu libro está listo" necesita permiso de notificaciones (Android 13+). Se pide
     // al crear el audiolibro, que es cuando se entiende para qué sirve; la creación sigue igual si se niega.
     val notificationPermission = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { viewModel.create() }
@@ -198,7 +200,7 @@ fun ImportScreen(
                 Phase.LOADING, Phase.GONE -> Box(Modifier.fillMaxSize())
                 Phase.ANALYZING -> book?.let { AnalyzingContent(it) }
                 Phase.ERROR -> book?.let {
-                    ErrorContent(it, onRetry = viewModel::retry, onRunOcr = { choosingOcrPages = true }, onDiscard = { confirmDelete = true })
+                    ErrorContent(it, onRetry = viewModel::retry, onRunOcr = { plus.require { choosingOcrPages = true } }, onDiscard = { confirmDelete = true })
                 }
                 Phase.READY -> book?.let { ReadyContent(state, it, viewModel, onReadChapter) }
             }
@@ -358,6 +360,7 @@ private fun ReadyContent(state: ImportUiState, book: Book, viewModel: ImportView
     var editing by rememberSaveable { mutableStateOf(false) }
     var renaming by remember { mutableStateOf<Chapter?>(null) }
     var confirmOcr by remember { mutableStateOf(false) }
+    val plus = LocalPlus.current
     val coverPicker = rememberLauncherForActivityResult(ActivityResultContracts.PickVisualMedia()) { uri ->
         if (uri != null) viewModel.setCover(uri)
     }
@@ -451,7 +454,7 @@ private fun ReadyContent(state: ImportUiState, book: Book, viewModel: ImportView
                                 Text(line, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                             }
                         if (report.scannedPages > 0 && state.isFirstReview) {
-                            TextButton(onClick = { confirmOcr = true }) {
+                            TextButton(onClick = { plus.require { confirmOcr = true } }) {
                                 Text("Reconocer el texto de ${plural(report.scannedPages, "esa página", "esas páginas")}")
                             }
                         }
