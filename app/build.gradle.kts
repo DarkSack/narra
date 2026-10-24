@@ -1,4 +1,10 @@
+import java.util.Properties
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
+
+// Llave de subida a Play: keystore.properties (fuera de git) apunta al .jks. Sin ese archivo, el
+// bundle de Play sale sin firmar y Play Console lo rechaza.
+val playKey: Properties? = rootProject.file("keystore.properties").takeIf { it.exists() }
+    ?.let { file -> Properties().apply { file.inputStream().use(::load) } }
 
 plugins {
     alias(libs.plugins.android.application)
@@ -20,6 +26,17 @@ android {
         versionCode = 4
         versionName = "3.1.0"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+    }
+
+    signingConfigs {
+        if (playKey != null) {
+            create("play") {
+                storeFile = file(playKey.getProperty("storeFile"))
+                storePassword = playKey.getProperty("storePassword")
+                keyAlias = playKey.getProperty("keyAlias")
+                keyPassword = playKey.getProperty("keyPassword")
+            }
+        }
     }
 
     buildTypes {
@@ -44,6 +61,7 @@ android {
         }
         create("play") {
             dimension = "canal"
+            signingConfig = signingConfigs.findByName("play")
         }
     }
 

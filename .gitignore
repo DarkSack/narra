@@ -8,6 +8,7 @@ captures/
 
 # Configuración local (ruta del SDK, claves)
 local.properties
+keystore.properties
 *.jks
 *.keystore
 *.p12

@@ -60,7 +60,9 @@ Pruebas:
 
    La etiqueta debe ser `v` + `versionName`. La 3.0.0 no trae el actualizador: quien la tenga
    instala esta versión a mano una vez (encima, sin desinstalar) y desde ahí se actualiza sola.
-3. **Play.** Genera el App Bundle firmado con tu llave de subida y súbelo a Play Console:
+3. **Play.** El App Bundle se firma con la llave de subida que indica `keystore.properties`
+   (fuera de git; apunta a `C:/Users/Sack/.android-keys/narra-upload.jks`). Genéralo y súbelo a
+   Play Console:
 
    ```bash
    ./gradlew :app:bundlePlayRelease
