@@ -63,6 +63,14 @@ class ImportRepositoryImpl @Inject constructor(
             storage.deleteBook(id)
             return@withContext ImportResult.Failed(if (copied == 0L) ErrorKind.PDF_EMPTY else ErrorKind.PDF_CORRUPT)
         }
+        // Algunos proveedores (compartir, Descargas) no declaran el tamaño: se comprueba el
+        // duplicado con el tamaño real una vez copiado, en vez de dejarlo pasar.
+        if (!allowDuplicate && declaredSize == null) {
+            db.bookDao().findBySource(fileName, copied)?.let {
+                storage.deleteBook(id)
+                return@withContext ImportResult.AlreadyInLibrary(it.id, it.title)
+            }
+        }
 
         val voice = settings.settings.first().defaultVoice
         db.bookDao().insert(
