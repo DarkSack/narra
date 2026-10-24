@@ -190,6 +190,10 @@ interface SegmentDao {
     @Query("UPDATE segments SET state = 'PENDING', attempts = 0, errorKind = NULL, errorDetail = NULL WHERE bookId = :bookId AND state = 'ERROR'")
     suspend fun resetErrors(bookId: String)
 
+    /** Devuelve a pendiente todos los segmentos de un capítulo (al excluirlo se tira su audio). */
+    @Query("UPDATE segments SET state = 'PENDING', attempts = 0, errorKind = NULL, errorDetail = NULL WHERE chapterId = :chapterId")
+    suspend fun resetChapter(chapterId: Long)
+
     @Query("UPDATE segments SET state = 'PENDING', attempts = 0, errorKind = NULL, errorDetail = NULL WHERE bookId = :bookId")
     suspend fun resetAll(bookId: String)
 
@@ -240,6 +244,9 @@ interface AudioTrackDao {
 
     @Query("DELETE FROM audio_tracks WHERE bookId = :bookId")
     suspend fun deleteForBook(bookId: String)
+
+    @Query("DELETE FROM audio_tracks WHERE chapterId = :chapterId")
+    suspend fun deleteForChapter(chapterId: Long)
 
     @Query("SELECT * FROM audio_tracks WHERE bookId = :bookId")
     suspend fun forBook(bookId: String): List<AudioTrackEntity>

@@ -55,6 +55,10 @@ class BookStorage @Inject constructor(@ApplicationContext private val context: C
         audioDir(bookId).deleteRecursively()
     }
 
+    suspend fun deleteChapterAudio(bookId: String, chapterId: Long) = withContext(Dispatchers.IO) {
+        File(audioDir(bookId), chapterId.toString()).deleteRecursively()
+    }
+
     /**
      * Borra los temporales de Narra con más de [STALE_AFTER_MS]: los de un fragmento o una
      * exportación en curso son recientes y se respetan. Solo toca sus propias carpetas: en la

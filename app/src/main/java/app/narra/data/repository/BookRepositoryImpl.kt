@@ -20,6 +20,7 @@ import app.narra.domain.model.ErrorKind
 import app.narra.domain.model.NarraException
 import app.narra.domain.model.Paragraph
 import app.narra.domain.model.ProcessingJob
+import app.narra.domain.model.SegmentState
 import app.narra.domain.model.VoiceSettings
 import app.narra.domain.repository.BookRepository
 import app.narra.domain.repository.ProcessingQueue
@@ -133,8 +134,26 @@ class BookRepositoryImpl @Inject constructor(
     }
 
     override suspend fun setChapterIncluded(bookId: String, chapterId: Long, included: Boolean) {
-        chapters.setIncluded(chapterId, included)
-        stats.refreshBook(bookId)
+        if (included) {
+            chapters.setIncluded(chapterId, included)
+            stats.refreshBook(bookId)
+            // Un libro que ya estaba terminado vuelve a generar el capítulo recuperado; mientras
+            // se genera, la cola en marcha lo recoge sola.
+            if (books.get(bookId)?.state in REGENERATE_ON_INCLUDE &&
+                segments.forChapter(chapterId).any { it.state == SegmentState.PENDING }
+            ) {
+                queue.generate(bookId)
+            }
+        } else {
+            // Excluir un capítulo libera su audio; si se vuelve a incluir, se regenera.
+            db.withTransaction {
+                db.audioTrackDao().deleteForChapter(chapterId)
+                segments.resetChapter(chapterId)
+                chapters.setIncluded(chapterId, included)
+            }
+            storage.deleteChapterAudio(bookId, chapterId)
+            stats.refreshBook(bookId)
+        }
     }
 
     override suspend fun moveChapter(bookId: String, chapterId: Long, offset: Int) {
@@ -177,5 +196,8 @@ class BookRepositoryImpl @Inject constructor(
     companion object {
         const val COVER_WIDTH_PX = 720
         const val COVER_JPEG_QUALITY = 88
+
+        /** Estados en los que la cola no sigue en marcha: hay que reencolar para recrear el capítulo. */
+        private val REGENERATE_ON_INCLUDE = setOf(BookState.COMPLETED, BookState.ERROR)
     }
 }
