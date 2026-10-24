@@ -20,6 +20,9 @@ Kotlin, Jetpack Compose y Material 3, Hilt, Room, WorkManager, DataStore, Media3
 PdfBox-Android, ML Kit (OCR), MediaCodec/MediaMuxer (AAC/M4A). La arquitectura y el sistema de
 diseño están descritos en [docs/ARQUITECTURA.md](docs/ARQUITECTURA.md).
 
+Para publicar en Google Play: [docs/PLAY_STORE.md](docs/PLAY_STORE.md) (ficha, seguridad de los datos,
+servicios en primer plano y capturas) y la [política de privacidad](docs/PRIVACIDAD.md).
+
 ## Compilar
 
 Requiere JDK 17 y el SDK de Android (compileSdk 36).

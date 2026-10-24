@@ -27,6 +27,8 @@ playAppUpdate = "2.1.0"
 playBilling = "9.1.0"
 junit = "4.13.2"
 androidxTestRunner = "1.6.2"
+robolectric = "4.17"
+androidxTestCore = "1.7.0"
 androidxTestExtJunit = "1.2.1"
 
 [libraries]
@@ -76,6 +78,8 @@ play-app-update = { group = "com.google.android.play", name = "app-update", vers
 play-billing = { group = "com.android.billingclient", name = "billing-ktx", version.ref = "playBilling" }
 junit = { group = "junit", name = "junit", version.ref = "junit" }
 androidx-test-runner = { group = "androidx.test", name = "runner", version.ref = "androidxTestRunner" }
+androidx-test-core = { group = "androidx.test", name = "core", version.ref = "androidxTestCore" }
+robolectric = { group = "org.robolectric", name = "robolectric", version.ref = "robolectric" }
 androidx-test-ext-junit = { group = "androidx.test.ext", name = "junit", version.ref = "androidxTestExtJunit" }
 
 [plugins]

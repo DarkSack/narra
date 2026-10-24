@@ -75,6 +75,11 @@ android {
         buildConfig = true
     }
 
+    testOptions {
+        // Robolectric necesita los recursos de la app (fuentes, colores) para dibujar pantallas.
+        unitTests.isIncludeAndroidResources = true
+    }
+
     packaging {
         resources.excludes += "/META-INF/{AL2.0,LGPL2.1}"
         // Tablas de algoritmos post-cuánticos de Bouncy Castle (unos 8 MB). PdfBox usa Bouncy
@@ -157,6 +162,11 @@ dependencies {
 
     testImplementation(libs.junit)
     testImplementation(libs.kotlinx.coroutines.test)
+    // Capturas para la ficha de Play (StoreScreenshots): pantallas reales dibujadas con Robolectric.
+    testImplementation(libs.robolectric)
+    testImplementation(libs.androidx.test.core)
+    testImplementation(platform(libs.androidx.compose.bom))
+    testImplementation(libs.androidx.compose.ui.test.junit4)
 
     androidTestImplementation(libs.androidx.test.runner)
     androidTestImplementation(libs.androidx.test.ext.junit)
@@ -165,4 +175,11 @@ dependencies {
     androidTestImplementation(libs.androidx.compose.ui.test.junit4)
     androidTestImplementation(libs.androidx.compose.ui.test.accessibility)
     debugImplementation(libs.androidx.compose.ui.test.manifest)
+}
+
+apply(from = rootProject.file("gradle/robolectric-offline.gradle.kts"))
+
+// Capturas para la ficha de Play: solo corren con -Pcapturas=<carpeta>.
+tasks.withType<Test>().configureEach {
+    systemProperty("narra.capturas", providers.gradleProperty("capturas").getOrElse(""))
 }
