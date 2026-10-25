@@ -7,6 +7,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
+import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -77,6 +78,7 @@ import app.narra.core.designsystem.component.CoverImage
 import app.narra.core.designsystem.component.EmptyState
 import app.narra.core.designsystem.component.rememberCoverAccent
 import app.narra.core.designsystem.motion.sharedCover
+import app.narra.core.designsystem.theme.COVER_ASPECT_RATIO
 import app.narra.core.designsystem.theme.NarraTheme
 import app.narra.core.designsystem.theme.narraTween
 import app.narra.core.ui.formatClock
@@ -159,68 +161,97 @@ fun PlayerScreen(
 
 @Composable
 private fun PlayerBody(state: PlayerUiState, viewModel: PlayerViewModel, onSheet: (PlayerSheet) -> Unit) {
+    val tokens = NarraTheme.tokens
+    BoxWithConstraints(Modifier.fillMaxSize()) {
+        if (maxWidth > maxHeight) {
+            // Apaisado (tableta o teléfono girado): portada a la izquierda y controles a la derecha, para que quepan.
+            val coverWidth: Dp = minOf(
+                tokens.playerCoverMaxWidth,
+                (maxHeight - 32.dp) * COVER_ASPECT_RATIO,
+                maxWidth * 0.4f - tokens.screenPadding * 2,
+            )
+            Row(Modifier.fillMaxSize().padding(horizontal = tokens.screenPadding), verticalAlignment = Alignment.CenterVertically) {
+                Box(Modifier.weight(0.4f), contentAlignment = Alignment.Center) { PlayerCover(state, coverWidth) }
+                Column(
+                    Modifier.weight(0.6f).verticalScroll(rememberScrollState()).padding(vertical = 16.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                ) { PlayerDetails(state, viewModel, onSheet) }
+            }
+        } else {
+            // En pantallas bajas la portada cede espacio a los controles.
+            val coverWidth: Dp = minOf(tokens.playerCoverMaxWidth, maxWidth - tokens.screenPadding * 4, maxHeight * 0.38f)
+            Column(
+                Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal = tokens.screenPadding),
+                horizontalAlignment = Alignment.CenterHorizontally,
+            ) {
+                Spacer(Modifier.height(16.dp))
+                PlayerCover(state, coverWidth)
+                Spacer(Modifier.height(28.dp))
+                PlayerDetails(state, viewModel, onSheet)
+                Spacer(Modifier.height(24.dp))
+            }
+        }
+    }
+}
+
+@Composable
+private fun PlayerCover(state: PlayerUiState, width: Dp) {
+    val book = state.book ?: return
+    val coverScale by animateFloatAsState(if (state.snapshot.playWhenReady) 1f else COVER_PAUSED_SCALE, narraTween(), label = "coverScale")
+    CoverImage(
+        book.title,
+        book.author,
+        book.coverPath,
+        Modifier.sharedCover(book.id).scale(coverScale),
+        width = width,
+        contentDescription = "Portada de ${book.title}",
+    )
+}
+
+/** Título, capítulo, barra de posición y controles. */
+@Composable
+private fun ColumnScope.PlayerDetails(state: PlayerUiState, viewModel: PlayerViewModel, onSheet: (PlayerSheet) -> Unit) {
     val book = state.book ?: return
     val tokens = NarraTheme.tokens
     val snapshot = state.snapshot
-    BoxWithConstraints(Modifier.fillMaxSize()) {
-        // En pantallas bajas la portada cede espacio a los controles.
-        val coverWidth: Dp = minOf(tokens.playerCoverMaxWidth, maxWidth - tokens.screenPadding * 4, maxHeight * 0.38f)
-        Column(
-            Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal = tokens.screenPadding),
-            horizontalAlignment = Alignment.CenterHorizontally,
-        ) {
-            Spacer(Modifier.height(16.dp))
-            val coverScale by animateFloatAsState(if (snapshot.playWhenReady) 1f else COVER_PAUSED_SCALE, narraTween(), label = "coverScale")
-            CoverImage(
-                book.title,
-                book.author,
-                book.coverPath,
-                Modifier.sharedCover(book.id).scale(coverScale),
-                width = coverWidth,
-                contentDescription = "Portada de ${book.title}",
-            )
-            Spacer(Modifier.height(28.dp))
-            Text(
-                book.title,
-                style = if (tokens.editorial) MaterialTheme.typography.headlineSmall else MaterialTheme.typography.titleLarge,
-                textAlign = TextAlign.Center,
-                maxLines = 2,
-                overflow = TextOverflow.Ellipsis,
-            )
-            book.author?.let {
-                Text(it, style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1)
-            }
-            Spacer(Modifier.height(6.dp))
-            val timeline = state.timeline
-            Text(
-                timeline?.let { chapterHeading(it.chapterNumber, it.chapterTitle) } ?: snapshot.chapterTitle.orEmpty(),
-                style = MaterialTheme.typography.labelLarge,
-                color = MaterialTheme.colorScheme.primary,
-                textAlign = TextAlign.Center,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-            )
-
-            Spacer(Modifier.height(20.dp))
-            ChapterSeekBar(state, onSeek = viewModel::seekInChapter)
-
-            AnimatedVisibility(snapshot.waitingForAudio || snapshot.errorMessage != null) {
-                Text(
-                    snapshot.errorMessage ?: "Generando el siguiente fragmento. La reproducción seguirá sola en cuanto esté listo.",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = if (snapshot.errorMessage != null) MaterialTheme.colorScheme.error else NarraTheme.colors.processing,
-                    textAlign = TextAlign.Center,
-                    modifier = Modifier.padding(top = 8.dp),
-                )
-            }
-
-            Spacer(Modifier.height(12.dp))
-            TransportControls(state, viewModel)
-            Spacer(Modifier.height(24.dp))
-            SecondaryControls(state, onSheet)
-            Spacer(Modifier.height(24.dp))
-        }
+    Text(
+        book.title,
+        style = if (tokens.editorial) MaterialTheme.typography.headlineSmall else MaterialTheme.typography.titleLarge,
+        textAlign = TextAlign.Center,
+        maxLines = 2,
+        overflow = TextOverflow.Ellipsis,
+    )
+    book.author?.let {
+        Text(it, style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1)
     }
+    Spacer(Modifier.height(6.dp))
+    val timeline = state.timeline
+    Text(
+        timeline?.let { chapterHeading(it.chapterNumber, it.chapterTitle) } ?: snapshot.chapterTitle.orEmpty(),
+        style = MaterialTheme.typography.labelLarge,
+        color = MaterialTheme.colorScheme.primary,
+        textAlign = TextAlign.Center,
+        maxLines = 1,
+        overflow = TextOverflow.Ellipsis,
+    )
+
+    Spacer(Modifier.height(20.dp))
+    ChapterSeekBar(state, onSeek = viewModel::seekInChapter)
+
+    AnimatedVisibility(snapshot.waitingForAudio || snapshot.errorMessage != null) {
+        Text(
+            snapshot.errorMessage ?: "Generando el siguiente fragmento. La reproducción seguirá sola en cuanto esté listo.",
+            style = MaterialTheme.typography.bodySmall,
+            color = if (snapshot.errorMessage != null) MaterialTheme.colorScheme.error else NarraTheme.colors.processing,
+            textAlign = TextAlign.Center,
+            modifier = Modifier.padding(top = 8.dp),
+        )
+    }
+
+    Spacer(Modifier.height(12.dp))
+    TransportControls(state, viewModel)
+    Spacer(Modifier.height(24.dp))
+    SecondaryControls(state, onSheet)
 }
 
 @Composable
