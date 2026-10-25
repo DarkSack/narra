@@ -176,19 +176,7 @@ class PlaybackController @Inject constructor(@ApplicationContext private val con
         }
     }
 
-    fun togglePlayPause() = command { c ->
-        when {
-            c.playbackState == Player.STATE_ENDED && !_snapshot.value.waitingForAudio -> {
-                c.seekToDefaultPosition(0)
-                c.play()
-            }
-            c.playWhenReady -> c.pause()
-            else -> {
-                if (c.playbackState == Player.STATE_IDLE) c.prepare()
-                c.play()
-            }
-        }
-    }
+    fun togglePlayPause() = command { it.togglePlayPause(_snapshot.value.waitingForAudio) }
 
     fun pause() = command { it.pause() }
 
@@ -224,5 +212,20 @@ class PlaybackController @Inject constructor(@ApplicationContext private val con
 
     private companion object {
         const val POSITION_INTERVAL_MS = 250L
+    }
+}
+
+/** Reproducir o pausar; si el libro terminó y no espera audio nuevo, vuelve a empezar. También lo usan los widgets. */
+internal fun Player.togglePlayPause(waitingForAudio: Boolean) {
+    when {
+        playbackState == Player.STATE_ENDED && !waitingForAudio -> {
+            seekToDefaultPosition(0)
+            play()
+        }
+        playWhenReady -> pause()
+        else -> {
+            if (playbackState == Player.STATE_IDLE) prepare()
+            play()
+        }
     }
 }

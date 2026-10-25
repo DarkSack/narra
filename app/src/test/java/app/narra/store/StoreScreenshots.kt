@@ -266,7 +266,8 @@ class StoreScreenshots {
     // ------------------------------------------------------------------ Capturas
 
     private fun shoot(name: String, waitFor: String, scrollBy: Float = 0f, content: @Composable () -> Unit) {
-        compose.setContent { NarraTheme(settings.value) { content() } }
+        val theme = settings.value
+        compose.setContent { NarraTheme(theme) { content() } }
         // Hay animaciones infinitas (progreso, reproducción) y esperas con el reloj de Android (la
         // búsqueda de la biblioteca): los dos relojes se avanzan a mano. Mientras, Coil carga las portadas.
         compose.mainClock.autoAdvance = false

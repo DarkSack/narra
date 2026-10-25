@@ -7,7 +7,7 @@ import app.narra.domain.model.BookState
 import app.narra.domain.repository.BookRepository
 import app.narra.domain.repository.ProcessingQueue
 import app.narra.playback.PlaybackController
-import app.narra.presentation.common.isListenable
+import app.narra.presentation.common.toContinue
 import app.narra.presentation.common.summarizeProcessing
 import app.narra.presentation.components.ProcessingSummary
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -64,10 +64,7 @@ class HomeViewModel @Inject constructor(
     }
 
     private fun buildState(all: List<Book>, processing: List<ProcessingSummary>): HomeUiState {
-        val current = all
-            .filter { it.lastPlayedAt != null && it.isListenable && !it.isCompleted }
-            .maxByOrNull { it.lastPlayedAt ?: 0L }
-            ?: all.filter { it.isListenable && !it.isStarted }.maxByOrNull { it.importedAt }
+        val current = all.toContinue()
         val listened = all.filter { it.lastPlayedAt != null && it.id != current?.id }
             .sortedByDescending { it.lastPlayedAt }
             .take(SHELF_SIZE)

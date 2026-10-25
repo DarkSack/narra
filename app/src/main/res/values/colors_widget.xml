@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Widgets de Inicio, tema claro (papel y tinta). El oscuro está en values-night. -->
+    <color name="widget_background">#FBF8F2</color>
+    <color name="widget_text">#1D1B24</color>
+    <color name="widget_secondary">#5E5A6B</color>
+    <color name="widget_accent">#8A5500</color>
+    <color name="widget_button">#4B45C6</color>
+    <color name="widget_on_button">#FFFFFF</color>
+    <color name="widget_track">#E3DFF0</color>
+</resources>

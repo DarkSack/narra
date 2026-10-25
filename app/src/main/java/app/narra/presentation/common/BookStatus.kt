@@ -44,3 +44,8 @@ fun Book.metaLine(): String = buildList {
 
 /** El libro ya se puede escuchar, aunque siga generándose. */
 val Book.isListenable: Boolean get() = hasPlayableAudio
+
+/** El libro de «Continúa escuchando» (Inicio y widgets): el último escuchado sin terminar o, si no, el más nuevo sin empezar. */
+fun List<Book>.toContinue(): Book? =
+    filter { it.lastPlayedAt != null && it.isListenable && !it.isCompleted }.maxByOrNull { it.lastPlayedAt ?: 0L }
+        ?: filter { it.isListenable && !it.isStarted }.maxByOrNull { it.importedAt }

@@ -85,6 +85,7 @@ tts/                proveedores (Android TTS; preparado para proveedores en la n
 audio/              WAV → AAC/M4A (MediaCodec + MediaMuxer), silencios, exportación
 processing/         workers de WorkManager, cola, notificaciones
 playback/           MediaSessionService + ExoPlayer, temporizador, conexión desde la UI
+widget/             widgets de Inicio (RemoteViews): «Continúa escuchando» y reproductor con ±segundos
 presentation/       navegación y pantallas (cada una con ViewModel + UiState)
 update/             AppUpdater, uno por canal: src/interna (GitHub Releases) y src/play (Play In-App Updates)
 plus/               Narra Plus: Plus por canal (interna: activo; play: Play Billing) y PlusUi (LocalPlus, diálogo)

@@ -31,6 +31,7 @@ import app.narra.domain.model.PlayableTrack
 import app.narra.domain.repository.BookRepository
 import app.narra.domain.repository.PlaybackRepository
 import app.narra.domain.repository.SettingsRepository
+import app.narra.widget.NarraWidgets
 import com.google.common.util.concurrent.ListenableFuture
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.CoroutineScope
@@ -131,6 +132,7 @@ class PlaybackService : MediaSessionService() {
     }
 
     override fun onDestroy() {
+        NarraWidgets.playing.value = false
         saveProgress()
         sleepTimer?.cancel()
         session?.run {
@@ -271,6 +273,7 @@ class PlaybackService : MediaSessionService() {
 
     private inner class PlayerEvents : Player.Listener {
         override fun onIsPlayingChanged(isPlaying: Boolean) {
+            NarraWidgets.playing.value = isPlaying
             if (!isPlaying) saveProgress()
         }
 
