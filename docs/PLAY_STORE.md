@@ -149,7 +149,12 @@ subir la versión.
 ## 6. Servicios en primer plano
 
 Play pide, por cada tipo, una descripción, el efecto si el sistema lo interrumpe y **un video**
-(**Tú**: grábalo en el teléfono y súbelo a YouTube como «no listado»).
+Ya están grabados (tableta, 2026-10-26) y publicados en el bucket público `play-store` del Supabase de la tienda;
+el montaje completo está en `play/video-servicios-primer-plano.mp4`:
+
+- `mediaPlayback`: https://lsngehykuqbpfjcdsrpu.supabase.co/storage/v1/object/public/play-store/narra/fgs-media-playback.mp4
+- `mediaProcessing`: https://lsngehykuqbpfjcdsrpu.supabase.co/storage/v1/object/public/play-store/narra/fgs-media-processing.mp4
+- `dataSync`: https://lsngehykuqbpfjcdsrpu.supabase.co/storage/v1/object/public/play-store/narra/fgs-data-sync.mp4
 
 | Tipo | Descripción para Play | Si se interrumpe | El video muestra |
 |---|---|---|---|
