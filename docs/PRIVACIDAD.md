@@ -66,4 +66,4 @@ Si una versión futura cambia algo de esta política, se actualizará este texto
 
 ## Contacto
 
-[Nombre del desarrollador] · [correo de contacto]
+Johan Jafet Del Valle Santiago · donsackito@protonmail.com

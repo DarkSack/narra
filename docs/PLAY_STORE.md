@@ -74,7 +74,7 @@ Primera versión en Google Play.
 > • Sin cuenta y sin anuncios.
 
 **Categoría:** Libros y obras de consulta. **Etiquetas:** audiolibros, lector de PDF, texto a voz.
-**Correo de contacto** (**Tú**): el que quieras mostrar; también va en la política de privacidad.
+**Correo de contacto:** donsackito@protonmail.com, el mismo de la política de privacidad (si lo cambias, cámbialo en las dos).
 
 **Gráficos** (en `play/`):
 
@@ -102,7 +102,7 @@ subir este bundle a un canal de prueba y crear el producto único **`narra_plus`
 
 | Sección | Respuesta |
 |---|---|
-| Política de privacidad | URL pública de [PRIVACIDAD.md](PRIVACIDAD.md) (**Tú**: alojarla) |
+| Política de privacidad | https://shop.sackito.online/privacidad/narra (copia de [PRIVACIDAD.md](PRIVACIDAD.md) en `lib/privacidad-apps.ts` de rpgroll-shop: si cambia una, cambiar la otra) |
 | Anuncios | No contiene anuncios |
 | Acceso a la app | Toda la funcionalidad está disponible sin restricciones (no hay cuenta; Plus es una compra, no un acceso) |
 | Clasificación de contenido | Cuestionario IARC, categoría «Utilidades, productividad, comunicación u otros». Compras digitales: **Sí**. Lo demás «No»: sin violencia, sexo, lenguaje, drogas, apuestas, interacción entre usuarios ni ubicación |
