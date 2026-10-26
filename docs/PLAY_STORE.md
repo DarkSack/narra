@@ -7,7 +7,7 @@ Todo lo que pide Play Console, listo para copiar. Lo que solo puede hacer el due
 
 | | |
 |---|---|
-| Archivo para Play | `app/build/outputs/bundle/playRelease/app-play-release.aab` (canal `play`) |
+| Archivo para Play | `E:\Dev\pdf-audiobooks\app\build\outputs\bundle\playRelease\app-play-release.aab` (canal `play`; se sube este, no un APK) |
 | Generarlo | `./gradlew :app:bundlePlayRelease` |
 | Paquete y versión | `app.narra`, versionName 3.1.0, versionCode 4 |
 | SDK | mínimo 26, objetivo 36 (Play exige 36 desde el 31 de agosto de 2026) |
@@ -19,6 +19,23 @@ Todo lo que pide Play Console, listo para copiar. Lo que solo puede hacer el due
 
 El canal `interna` (APK de GitHub con autoactualizador y permiso para instalar paquetes) nunca va a
 Play: Play prohíbe que una app se actualice por fuera de la tienda.
+
+### Notas de la versión 3.1.0
+
+Se pegan tal cual en «Notas de la versión» al crear la versión. `es-419` es español (Latinoamérica), el idioma
+predeterminado de la ficha; Play admite 500 caracteres por idioma y estas tienen 489.
+
+```
+<es-419>
+Primera versión en Google Play.
+• Convierte tus PDF en audiolibros por capítulos con las voces de tu teléfono, sin subirlos a ningún lado.
+• Detecta título, autor, portada y capítulos, y quita encabezados y números de página.
+• Escucha el primer capítulo mientras se crean los demás.
+• Reproductor con velocidad, temporizador para dormir y vista horizontal.
+• Widgets de Inicio para seguir escuchando y adelantar o atrasar.
+• Narra Plus: libros sin límite, exportar a M4A y PDF escaneados.
+</es-419>
+```
 
 ## 2. Ficha de Play Store (español de México)
 
