@@ -152,9 +152,11 @@ Play pide, por cada tipo, una descripción, el efecto si el sistema lo interrump
 Ya están grabados (tableta, 2026-10-26) y publicados en el bucket público `play-store` del Supabase de la tienda;
 el montaje completo está en `play/video-servicios-primer-plano.mp4`:
 
-- `mediaPlayback`: https://lsngehykuqbpfjcdsrpu.supabase.co/storage/v1/object/public/play-store/narra/fgs-media-playback.mp4
-- `mediaProcessing`: https://lsngehykuqbpfjcdsrpu.supabase.co/storage/v1/object/public/play-store/narra/fgs-media-processing.mp4
-- `dataSync`: https://lsngehykuqbpfjcdsrpu.supabase.co/storage/v1/object/public/play-store/narra/fgs-data-sync.mp4
+- `mediaPlayback`: https://lsngehykuqbpfjcdsrpu.supabase.co/storage/v1/object/public/play-store/narra/fgs-media-playback-v2.mp4
+- `mediaProcessing`: https://lsngehykuqbpfjcdsrpu.supabase.co/storage/v1/object/public/play-store/narra/fgs-media-processing-v2.mp4
+- `dataSync`: https://lsngehykuqbpfjcdsrpu.supabase.co/storage/v1/object/public/play-store/narra/fgs-data-sync-v2.mp4
+
+Un video por permiso: cada uno abre con el nombre de su permiso y sus rótulos hablan solo de él.
 
 | Tipo | Descripción para Play | Si se interrumpe | El video muestra |
 |---|---|---|---|
