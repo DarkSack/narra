@@ -182,4 +182,5 @@ apply(from = rootProject.file("gradle/robolectric-offline.gradle.kts"))
 // Capturas para la ficha de Play: solo corren con -Pcapturas=<carpeta>.
 tasks.withType<Test>().configureEach {
     systemProperty("narra.capturas", providers.gradleProperty("capturas").getOrElse(""))
+    systemProperty("narra.tema", providers.gradleProperty("tema").getOrElse(""))
 }

@@ -1,7 +1,6 @@
 package app.narra.presentation.player
 
 import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
@@ -26,6 +25,8 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.FormatListBulleted
@@ -47,6 +48,7 @@ import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Slider
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.rememberModalBottomSheetState
@@ -60,12 +62,12 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.scale
-import androidx.compose.ui.graphics.Brush
-import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.stateDescription
+import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
@@ -76,9 +78,11 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import app.narra.core.designsystem.component.CoverImage
 import app.narra.core.designsystem.component.EmptyState
-import app.narra.core.designsystem.component.rememberCoverAccent
+import app.narra.core.designsystem.component.TextToVoiceProgress
+import app.narra.core.designsystem.component.lampGlow
 import app.narra.core.designsystem.motion.sharedCover
 import app.narra.core.designsystem.theme.COVER_ASPECT_RATIO
+import app.narra.core.designsystem.theme.Literata
 import app.narra.core.designsystem.theme.NarraTheme
 import app.narra.core.designsystem.theme.narraTween
 import app.narra.core.ui.formatClock
@@ -104,21 +108,9 @@ fun PlayerScreen(
     var sheet by remember { mutableStateOf<PlayerSheet?>(null) }
     val book = state.book
 
-    val accent by animateColorAsState(
-        if (book != null) rememberCoverAccent(book.title, book.coverPath) else MaterialTheme.colorScheme.primary,
-        narraTween(),
-        label = "accent",
-    )
-    Box(
-        Modifier
-            .fillMaxSize()
-            .background(MaterialTheme.colorScheme.background)
-            .background(
-                Brush.verticalGradient(
-                    listOf(accent.copy(alpha = if (NarraTheme.isDark) 0.55f else 0.35f), MaterialTheme.colorScheme.background),
-                ),
-            ),
-    ) {
+    // Surface y no Box: fija el color del texto y los iconos al del tema, también fuera de la navegación.
+    Surface(color = MaterialTheme.colorScheme.background, modifier = Modifier.fillMaxSize()) {
+    Box(Modifier.fillMaxSize().lampGlow(NarraTheme.colors.glow, centerY = 0.3f)) {
         Column(
             Modifier
                 .fillMaxSize()
@@ -152,6 +144,7 @@ fun PlayerScreen(
                 PlayerBody(state, viewModel, onSheet = { sheet = it })
             }
         }
+    }
     }
 
     sheet?.let { current ->
@@ -212,11 +205,22 @@ private fun PlayerCover(state: PlayerUiState, width: Dp) {
 @Composable
 private fun ColumnScope.PlayerDetails(state: PlayerUiState, viewModel: PlayerViewModel, onSheet: (PlayerSheet) -> Unit) {
     val book = state.book ?: return
-    val tokens = NarraTheme.tokens
     val snapshot = state.snapshot
+    val timeline = state.timeline
+    // El capítulo va arriba, en cursiva y en el color de rúbrica: es lo que está sonando ahora.
+    val chapter = timeline?.let { chapterHeading(it.chapterNumber, it.chapterTitle) } ?: snapshot.chapterTitle.orEmpty()
+    Text(
+        if (NarraTheme.tokens.isPress && chapter.isNotEmpty()) "❦  $chapter  ❦" else chapter,
+        style = MaterialTheme.typography.titleMedium.copy(fontFamily = Literata, fontStyle = FontStyle.Italic, fontWeight = FontWeight.Normal),
+        color = NarraTheme.colors.rubric,
+        textAlign = TextAlign.Center,
+        maxLines = 1,
+        overflow = TextOverflow.Ellipsis,
+    )
+    Spacer(Modifier.height(6.dp))
     Text(
         book.title,
-        style = if (tokens.editorial) MaterialTheme.typography.headlineSmall else MaterialTheme.typography.titleLarge,
+        style = MaterialTheme.typography.headlineSmall,
         textAlign = TextAlign.Center,
         maxLines = 2,
         overflow = TextOverflow.Ellipsis,
@@ -224,16 +228,6 @@ private fun ColumnScope.PlayerDetails(state: PlayerUiState, viewModel: PlayerVie
     book.author?.let {
         Text(it, style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1)
     }
-    Spacer(Modifier.height(6.dp))
-    val timeline = state.timeline
-    Text(
-        timeline?.let { chapterHeading(it.chapterNumber, it.chapterTitle) } ?: snapshot.chapterTitle.orEmpty(),
-        style = MaterialTheme.typography.labelLarge,
-        color = MaterialTheme.colorScheme.primary,
-        textAlign = TextAlign.Center,
-        maxLines = 1,
-        overflow = TextOverflow.Ellipsis,
-    )
 
     Spacer(Modifier.height(20.dp))
     ChapterSeekBar(state, onSeek = viewModel::seekInChapter)
@@ -279,6 +273,11 @@ private fun ChapterSeekBar(state: PlayerUiState, onSeek: (Float) -> Unit) {
                 contentDescription = "Posición en el capítulo"
                 stateDescription = "${formatClock((duration * value).toLong())} de ${formatClock(duration)}"
             },
+            // Lo escuchado es onda y lo que falta, texto; la marca de posición es una raya fina.
+            thumb = {
+                Box(Modifier.size(width = 3.dp, height = 40.dp).background(MaterialTheme.colorScheme.onSurface, RoundedCornerShape(2.dp)))
+            },
+            track = { TextToVoiceProgress(value, height = 36.dp, seed = state.book?.id.hashCode(), announce = false) },
         )
         Row(Modifier.fillMaxWidth()) {
             Text(
@@ -316,9 +315,13 @@ private fun TransportControls(state: PlayerUiState, viewModel: PlayerViewModel) 
             Icon(Icons.Rounded.SkipPrevious, contentDescription = "Capítulo anterior", modifier = Modifier.size(30.dp))
         }
         SkipButton(seconds = state.skipBackSeconds, forward = false, onClick = viewModel::seekBack)
+        val glow = NarraTheme.colors.glow
         FilledIconButton(
             onClick = viewModel::togglePlayPause,
-            modifier = Modifier.size(PLAY_BUTTON_SIZE),
+            // En Lámpara el botón también da luz.
+            modifier = Modifier
+                .size(PLAY_BUTTON_SIZE)
+                .shadow(if (glow.alpha > 0f) 24.dp else 0.dp, CircleShape, ambientColor = glow, spotColor = glow.copy(alpha = 1f)),
             colors = IconButtonDefaults.filledIconButtonColors(),
         ) {
             when {

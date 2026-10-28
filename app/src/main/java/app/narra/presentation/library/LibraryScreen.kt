@@ -66,7 +66,7 @@ fun LibraryScreen(
         ) {
             Text(
                 "Biblioteca",
-                style = if (tokens.editorial) MaterialTheme.typography.displaySmall else MaterialTheme.typography.headlineMedium,
+                style = MaterialTheme.typography.displaySmall,
                 modifier = Modifier.weight(1f).semantics { heading() },
             )
             if (state.totalBooks > 0) {

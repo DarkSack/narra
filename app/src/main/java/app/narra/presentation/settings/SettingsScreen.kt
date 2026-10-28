@@ -1,6 +1,6 @@
 package app.narra.presentation.settings
 
-import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.border
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -37,7 +37,6 @@ import androidx.compose.material3.SegmentedButton
 import androidx.compose.material3.SegmentedButtonDefaults
 import androidx.compose.material3.SingleChoiceSegmentedButtonRow
 import androidx.compose.material3.Slider
-import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -59,8 +58,9 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.LifecycleResumeEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import app.narra.BuildConfig
-import app.narra.core.designsystem.theme.Inter
-import app.narra.core.designsystem.theme.Literata
+import app.narra.core.designsystem.component.CoverImage
+import app.narra.core.designsystem.component.TextToVoiceProgress
+import app.narra.core.designsystem.component.lampGlow
 import app.narra.core.designsystem.theme.NarraTheme
 import app.narra.core.ui.formatBytes
 import app.narra.core.ui.formatPercent
@@ -106,7 +106,7 @@ fun SettingsScreen(
         item {
             Text(
                 "Ajustes",
-                style = if (tokens.editorial) MaterialTheme.typography.displaySmall else MaterialTheme.typography.headlineMedium,
+                style = MaterialTheme.typography.displaySmall,
                 modifier = Modifier.padding(horizontal = tokens.screenPadding, vertical = 16.dp).semantics { heading() },
             )
         }
@@ -132,10 +132,11 @@ fun SettingsScreen(
 
         item { Group("Apariencia") }
         item {
-            Setting("Estilo de la interfaz", "Cambia la composición; las funciones son las mismas.") {
+            Setting("Estilo", "Cambia colores, portadas y letras; las funciones son las mismas.") {
                 Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                    StyleOption(UiStyle.READING, current.uiStyle, Modifier.weight(1f)) { update { s -> s.copy(uiStyle = it) } }
-                    StyleOption(UiStyle.MODERN, current.uiStyle, Modifier.weight(1f)) { update { s -> s.copy(uiStyle = it) } }
+                    UiStyle.entries.forEach { style ->
+                        StyleOption(style, current, Modifier.weight(1f)) { update { s -> s.copy(uiStyle = it) } }
+                    }
                 }
             }
         }
@@ -402,59 +403,52 @@ private fun TextScaleSetting(scale: Float, onChange: (Float) -> Unit) {
     }
 }
 
-/** Tarjeta de vista previa de un estilo: muestra cómo se ve, no solo su nombre. */
+/**
+ * Tarjeta de un tema dibujada con ese mismo tema (su papel, su portada y su onda), en claro u
+ * oscuro según los ajustes actuales: se ve cómo queda antes de elegirlo.
+ */
 @Composable
-private fun StyleOption(style: UiStyle, selected: UiStyle, modifier: Modifier = Modifier, onSelect: (UiStyle) -> Unit) {
-    val isSelected = style == selected
-    val (name, description, family) = when (style) {
-        UiStyle.READING -> Triple("Lectura", "Editorial, portadas grandes", Literata)
-        UiStyle.MODERN -> Triple("Moderno", "Compacto y funcional", Inter)
+private fun StyleOption(style: UiStyle, settings: AppSettings, modifier: Modifier = Modifier, onSelect: (UiStyle) -> Unit) {
+    val isSelected = style == settings.uiStyle
+    val (name, description) = when (style) {
+        UiStyle.LAMP -> "Lámpara" to "Tinta oscura y una sola luz cálida"
+        UiStyle.PRESS -> "Imprenta" to "Papel, tinta y rojo de rúbrica"
     }
-    Surface(
-        shape = RoundedCornerShape(16.dp),
-        color = if (isSelected) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceContainerLow,
-        border = if (isSelected) BorderStroke(2.dp, MaterialTheme.colorScheme.primary) else null,
-        modifier = modifier.selectable(selected = isSelected, role = Role.RadioButton, onClick = { onSelect(style) }),
+    val selection = MaterialTheme.colorScheme.primary
+    Box(
+        modifier
+            .border(if (isSelected) 2.dp else 1.dp, if (isSelected) selection else MaterialTheme.colorScheme.outlineVariant, RoundedCornerShape(14.dp))
+            .padding(4.dp)
+            .selectable(selected = isSelected, role = Role.RadioButton, onClick = { onSelect(style) }),
     ) {
-        Column(Modifier.padding(14.dp)) {
-            StylePreview(style)
-            Spacer(Modifier.height(10.dp))
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Text(name, style = MaterialTheme.typography.titleMedium.copy(fontFamily = family), modifier = Modifier.weight(1f))
-                if (isSelected) Icon(Icons.Rounded.CheckCircle, contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(20.dp))
+        NarraTheme(settings.copy(uiStyle = style, textScale = 1f)) {
+            Column(
+                Modifier
+                    .fillMaxWidth()
+                    .background(MaterialTheme.colorScheme.background, RoundedCornerShape(10.dp))
+                    .lampGlow(NarraTheme.colors.glow, centerY = 0.2f)
+                    .padding(12.dp),
+            ) {
+                Row(verticalAlignment = Alignment.Bottom) {
+                    CoverImage(name, null, null, width = 34.dp)
+                    Spacer(Modifier.width(10.dp))
+                    Text(name, style = MaterialTheme.typography.titleLarge.copy(fontStyle = MaterialTheme.typography.headlineSmall.fontStyle), color = MaterialTheme.colorScheme.onSurface, modifier = Modifier.weight(1f))
+                }
+                Spacer(Modifier.height(10.dp))
+                TextToVoiceProgress(0.4f, height = 18.dp, seed = style.ordinal, announce = false)
+                Spacer(Modifier.height(8.dp))
+                Text(description, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
-            Text(description, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
-    }
-}
-
-@Composable
-private fun StylePreview(style: UiStyle) {
-    val block = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.12f)
-    val accent = MaterialTheme.colorScheme.primary.copy(alpha = 0.5f)
-    Box(Modifier.fillMaxWidth().height(72.dp).background(MaterialTheme.colorScheme.surface, RoundedCornerShape(10.dp)).padding(8.dp)) {
-        if (style == UiStyle.READING) {
-            Row(verticalAlignment = Alignment.Bottom) {
-                Box(Modifier.size(width = 36.dp, height = 54.dp).background(accent, RoundedCornerShape(3.dp)))
-                Spacer(Modifier.width(8.dp))
-                Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                    Box(Modifier.size(width = 48.dp, height = 8.dp).background(block, RoundedCornerShape(2.dp)))
-                    Box(Modifier.size(width = 32.dp, height = 6.dp).background(block, RoundedCornerShape(2.dp)))
-                }
-            }
-        } else {
-            Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                repeat(PREVIEW_ROWS) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Box(Modifier.size(width = 12.dp, height = 16.dp).background(accent, RoundedCornerShape(2.dp)))
-                        Spacer(Modifier.width(6.dp))
-                        Box(Modifier.size(width = 56.dp, height = 6.dp).background(block, RoundedCornerShape(2.dp)))
-                    }
-                }
-            }
+        if (isSelected) {
+            Icon(
+                Icons.Rounded.CheckCircle,
+                contentDescription = null,
+                tint = selection,
+                modifier = Modifier.align(Alignment.TopEnd).padding(6.dp).size(20.dp),
+            )
         }
     }
 }
 
 private const val SCALE_STEPS = 20f
-private const val PREVIEW_ROWS = 3

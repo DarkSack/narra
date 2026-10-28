@@ -2,8 +2,12 @@ package app.narra.domain.model
 
 enum class ThemeMode { SYSTEM, LIGHT, DARK }
 
-/** Estilo de interfaz: cambia composición y densidad, nunca la funcionalidad. */
-enum class UiStyle { MODERN, READING }
+/**
+ * Tema visual: Lámpara (tinta oscura y una sola luz cálida) o Imprenta (papel, tinta y rojo de
+ * rúbrica). Cambia colores, formas, portadas y tipografía, nunca la funcionalidad.
+ * Los valores guardados de versiones anteriores (MODERN, READING) caen al predeterminado.
+ */
+enum class UiStyle { LAMP, PRESS }
 
 enum class UiDensity { COMFORTABLE, COMPACT }
 
@@ -21,7 +25,7 @@ data class AppSettings(
     val onboardingCompleted: Boolean = false,
     // Apariencia
     val themeMode: ThemeMode = ThemeMode.SYSTEM,
-    val uiStyle: UiStyle = UiStyle.READING,
+    val uiStyle: UiStyle = UiStyle.LAMP,
     val textScale: Float = 1f,
     val reduceMotion: Boolean = false,
     val highContrast: Boolean = false,

@@ -2,10 +2,8 @@ package app.narra.presentation.book
 
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.animateContentSize
 import androidx.compose.animation.core.animateFloatAsState
-import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -36,7 +34,7 @@ import androidx.compose.material.icons.rounded.SaveAlt
 import androidx.compose.material.icons.rounded.StopCircle
 import androidx.compose.material.icons.rounded.Tune
 import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.Button
+import app.narra.core.designsystem.component.Button
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.HorizontalDivider
@@ -62,7 +60,6 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.semantics.Role
@@ -77,9 +74,9 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import app.narra.core.designsystem.component.CoverImage
 import app.narra.core.designsystem.component.EmptyState
 import app.narra.core.designsystem.component.ErrorState
-import app.narra.core.designsystem.component.NarraProgressBar
 import app.narra.core.designsystem.component.SectionHeader
-import app.narra.core.designsystem.component.rememberCoverAccent
+import app.narra.core.designsystem.component.TextToVoiceProgress
+import app.narra.core.designsystem.component.lampGlow
 import app.narra.core.designsystem.motion.sharedCover
 import app.narra.core.designsystem.motion.sharedTitle
 import app.narra.core.designsystem.theme.NarraTheme
@@ -238,7 +235,6 @@ private fun BookDetailsContent(
     onErrorAction: (RecoveryAction) -> Unit,
 ) {
     val tokens = NarraTheme.tokens
-    val accent by animateColorAsState(rememberCoverAccent(book.title, book.coverPath), narraTween(), label = "accent")
     val chapters = state.includedChapters
     LazyColumn(
         contentPadding = PaddingValues(bottom = LocalBottomOverlayPadding.current + tokens.sectionSpacing),
@@ -248,13 +244,8 @@ private fun BookDetailsContent(
             Column(
                 Modifier
                     .fillMaxWidth()
-                    .then(
-                        if (tokens.tintedBackdrops) {
-                            Modifier.background(Brush.verticalGradient(listOf(accent.copy(alpha = if (NarraTheme.isDark) 0.5f else 0.32f), Color.Transparent)))
-                        } else {
-                            Modifier
-                        },
-                    )
+                    .lampGlow(NarraTheme.colors.glow, centerY = 0.25f)
+
                     .padding(top = contentPadding.calculateTopPadding())
                     .padding(horizontal = tokens.screenPadding),
                 horizontalAlignment = Alignment.CenterHorizontally,
@@ -265,13 +256,13 @@ private fun BookDetailsContent(
                     book.author,
                     book.coverPath,
                     Modifier.sharedCover(book.id),
-                    width = tokens.heroCoverWidth * if (tokens.editorial) 1.2f else 1.4f,
+                    width = tokens.heroCoverWidth * 1.2f,
                     contentDescription = "Portada de ${book.title}",
                 )
                 Spacer(Modifier.height(20.dp))
                 Text(
                     book.title,
-                    style = if (tokens.editorial) MaterialTheme.typography.headlineMedium else MaterialTheme.typography.headlineSmall,
+                    style = MaterialTheme.typography.headlineMedium,
                     textAlign = TextAlign.Center,
                     modifier = Modifier.sharedTitle(book.id).semantics { heading() },
                 )
@@ -379,7 +370,7 @@ private fun ReviewCard(book: Book, onReview: () -> Unit, modifier: Modifier = Mo
 private fun PlayBlock(book: Book, isPlaying: Boolean, onPlay: () -> Unit) {
     Column(Modifier.widthIn(max = 420.dp).fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally) {
         if (book.isStarted && !book.isCompleted) {
-            NarraProgressBar(book.listenedFraction, height = 6.dp)
+            TextToVoiceProgress(book.listenedFraction, seed = book.id.hashCode())
             Spacer(Modifier.height(6.dp))
             Text(
                 "${formatPercent(book.listenedFraction)} escuchado · ${formatRemaining(book.remainingMs)}",

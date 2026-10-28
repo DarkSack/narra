@@ -42,10 +42,10 @@ import androidx.compose.material.icons.rounded.Lock
 import androidx.compose.material.icons.rounded.Notifications
 import androidx.compose.material.icons.rounded.PictureAsPdf
 import androidx.compose.material.icons.rounded.RecordVoiceOver
-import androidx.compose.material3.Button
+import app.narra.core.designsystem.component.Button
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
+import app.narra.core.designsystem.component.OutlinedButton
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -274,7 +274,7 @@ private fun Requirement(
 private fun Title(title: String, subtitle: String) {
     Text(
         title,
-        style = if (NarraTheme.tokens.editorial) MaterialTheme.typography.displaySmall else MaterialTheme.typography.headlineMedium,
+        style = MaterialTheme.typography.displaySmall,
         textAlign = TextAlign.Center,
         modifier = Modifier.semantics { heading() },
     )

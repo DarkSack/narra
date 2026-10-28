@@ -21,12 +21,12 @@ import androidx.compose.material.icons.rounded.Headphones
 import androidx.compose.material.icons.rounded.Pause
 import androidx.compose.material.icons.rounded.PlayArrow
 import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.Button
-import androidx.compose.material3.FilledTonalButton
+import app.narra.core.designsystem.component.Button
+import app.narra.core.designsystem.component.FilledTonalButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
+import app.narra.core.designsystem.component.OutlinedButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
@@ -56,6 +56,7 @@ import app.narra.core.designsystem.component.ChapterStateIcon
 import app.narra.core.designsystem.component.CoverImage
 import app.narra.core.designsystem.component.ErrorState
 import app.narra.core.designsystem.component.NarraProgressBar
+import app.narra.core.designsystem.component.TextToVoiceProgress
 import app.narra.core.designsystem.component.SectionHeader
 import app.narra.core.designsystem.theme.NarraTheme
 import app.narra.core.ui.RecoveryAction
@@ -250,7 +251,7 @@ private fun StatusBlock(
                 Text(details.joinToString(" · "), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
             Spacer(Modifier.height(12.dp))
-            NarraProgressBar(book.generationFraction, color = if (completed) NarraTheme.colors.available else NarraTheme.colors.processing, height = 8.dp)
+            TextToVoiceProgress(book.generationFraction, color = if (completed) NarraTheme.colors.available else NarraTheme.colors.processing, seed = book.id.hashCode())
             Spacer(Modifier.height(6.dp))
             Text(
                 "${formatPercent(book.generationFraction)} · ${book.chaptersAvailable} de ${book.chapterCount} capítulos con audio",

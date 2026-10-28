@@ -53,7 +53,7 @@ import androidx.compose.material.icons.rounded.MoreVert
 import androidx.compose.material.icons.rounded.PhotoLibrary
 import androidx.compose.material.icons.rounded.RecordVoiceOver
 import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.Button
+import app.narra.core.designsystem.component.Button
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DropdownMenu
@@ -62,7 +62,7 @@ import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
+import app.narra.core.designsystem.component.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
@@ -382,7 +382,7 @@ private fun ReadyContent(state: ImportUiState, book: Book, viewModel: ImportView
             Column(Modifier.fillMaxWidth().padding(horizontal = tokens.screenPadding), horizontalAlignment = Alignment.CenterHorizontally) {
                 Text(
                     "Tu libro está listo",
-                    style = if (tokens.editorial) MaterialTheme.typography.headlineMedium else MaterialTheme.typography.headlineSmall,
+                    style = MaterialTheme.typography.headlineMedium,
                     modifier = Modifier.semantics { heading() },
                 )
                 Spacer(Modifier.height(4.dp))

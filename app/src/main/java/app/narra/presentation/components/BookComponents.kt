@@ -98,7 +98,7 @@ fun BookCard(book: Book, onClick: () -> Unit, modifier: Modifier = Modifier, cov
         Spacer(Modifier.height(10.dp))
         Text(
             book.title,
-            style = if (tokens.editorial) MaterialTheme.typography.titleMedium.copy(fontFamily = MaterialTheme.typography.titleLarge.fontFamily) else MaterialTheme.typography.titleSmall,
+            style = MaterialTheme.typography.titleMedium.copy(fontFamily = MaterialTheme.typography.titleLarge.fontFamily),
             maxLines = 2,
             overflow = TextOverflow.Ellipsis,
         )

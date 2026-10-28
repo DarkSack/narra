@@ -34,55 +34,36 @@ data class NarraTokens(
     val gridMinCellWidth: Dp,
     /** Portada de "Reproduciendo". */
     val playerCoverMaxWidth: Dp,
-    /** Titulares en serif y metadatos con tono editorial. */
-    val editorial: Boolean,
-    /** Fondos teñidos con el color de la portada. */
-    val tintedBackdrops: Boolean,
-    /** Sombras de libro físico en las portadas. */
-    val coverShadows: Boolean,
+    /** Esquinas de los botones: píldora en Lámpara, casi rectas en Imprenta. */
+    val buttonRadius: Dp,
     /** Duración base de las transiciones entre pantallas. */
     val transitionMillis: Int,
 ) {
     /** Separación mínima recomendada para objetivos táctiles. */
     val minTouchTarget: Dp get() = 48.dp
 
+    val isPress: Boolean get() = style == UiStyle.PRESS
+
     companion object {
         fun of(style: UiStyle, density: UiDensity): NarraTokens {
+            val lamp = NarraTokens(
+                style = style,
+                screenPadding = 20.dp,
+                sectionSpacing = 36.dp,
+                itemSpacing = 16.dp,
+                cardRadius = 24.dp,
+                coverRadius = 4.dp,
+                heroCoverWidth = 140.dp,
+                shelfCoverWidth = 120.dp,
+                listCoverWidth = 64.dp,
+                gridMinCellWidth = 152.dp,
+                playerCoverMaxWidth = 300.dp,
+                buttonRadius = 50.dp,
+                transitionMillis = 420,
+            )
             val base = when (style) {
-                UiStyle.MODERN -> NarraTokens(
-                    style = style,
-                    screenPadding = 16.dp,
-                    sectionSpacing = 24.dp,
-                    itemSpacing = 12.dp,
-                    cardRadius = 16.dp,
-                    coverRadius = 10.dp,
-                    heroCoverWidth = 96.dp,
-                    shelfCoverWidth = 108.dp,
-                    listCoverWidth = 52.dp,
-                    gridMinCellWidth = 140.dp,
-                    playerCoverMaxWidth = 280.dp,
-                    editorial = false,
-                    tintedBackdrops = false,
-                    coverShadows = false,
-                    transitionMillis = 280,
-                )
-                UiStyle.READING -> NarraTokens(
-                    style = style,
-                    screenPadding = 20.dp,
-                    sectionSpacing = 36.dp,
-                    itemSpacing = 16.dp,
-                    cardRadius = 24.dp,
-                    coverRadius = 6.dp,
-                    heroCoverWidth = 150.dp,
-                    shelfCoverWidth = 128.dp,
-                    listCoverWidth = 64.dp,
-                    gridMinCellWidth = 152.dp,
-                    playerCoverMaxWidth = 340.dp,
-                    editorial = true,
-                    tintedBackdrops = true,
-                    coverShadows = true,
-                    transitionMillis = 420,
-                )
+                UiStyle.LAMP -> lamp
+                UiStyle.PRESS -> lamp.copy(cardRadius = 2.dp, coverRadius = 0.dp, buttonRadius = 3.dp, transitionMillis = 320)
             }
             return if (density == UiDensity.COMPACT) base.compact() else base
         }

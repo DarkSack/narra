@@ -2,7 +2,9 @@ package app.narra.core.designsystem.theme
 
 import android.provider.Settings
 import androidx.compose.foundation.isSystemInDarkTheme
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Shapes
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.ReadOnlyComposable
@@ -11,13 +13,14 @@ import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.Density
+import androidx.compose.ui.unit.dp
 import app.narra.domain.model.AppSettings
 import app.narra.domain.model.ThemeMode
 import app.narra.domain.model.UiDensity
 import app.narra.domain.model.UiStyle
 
-private val LocalNarraTokens = staticCompositionLocalOf { NarraTokens.of(UiStyle.READING, UiDensity.COMFORTABLE) }
-private val LocalNarraColors = staticCompositionLocalOf { narraColorsFor(LightColors, dark = false) }
+private val LocalNarraTokens = staticCompositionLocalOf { NarraTokens.of(UiStyle.LAMP, UiDensity.COMFORTABLE) }
+private val LocalNarraColors = staticCompositionLocalOf { narraColorsFor(colorSchemeFor(UiStyle.LAMP, dark = false), UiStyle.LAMP, dark = false) }
 private val LocalReduceMotion = staticCompositionLocalOf { false }
 private val LocalIsDark = staticCompositionLocalOf { false }
 
@@ -43,9 +46,11 @@ fun NarraTheme(settings: AppSettings, content: @Composable () -> Unit) {
         ThemeMode.LIGHT -> false
         ThemeMode.DARK -> true
     }
-    val scheme = (if (dark) DarkColors else LightColors).let { if (settings.highContrast) it.withHighContrast() else it }
+    val scheme = colorSchemeFor(settings.uiStyle, dark).let { if (settings.highContrast) it.withHighContrast() else it }
     val tokens = remember(settings.uiStyle, settings.density) { NarraTokens.of(settings.uiStyle, settings.density) }
-    val typography = remember(tokens.editorial) { narraTypography(tokens.editorial) }
+    val typography = remember(tokens.isPress) { narraTypography(tokens.isPress) }
+    // Imprenta: tarjetas, diálogos y menús de esquinas casi rectas, como papel cortado.
+    val shapes = remember(tokens.isPress) { if (tokens.isPress) PressShapes else Shapes() }
     val reduceMotion = settings.reduceMotion || systemAnimationsDisabled()
 
     val baseDensity = LocalDensity.current
@@ -55,14 +60,22 @@ fun NarraTheme(settings: AppSettings, content: @Composable () -> Unit) {
 
     CompositionLocalProvider(
         LocalNarraTokens provides tokens,
-        LocalNarraColors provides narraColorsFor(scheme, dark),
+        LocalNarraColors provides narraColorsFor(scheme, settings.uiStyle, dark),
         LocalReduceMotion provides reduceMotion,
         LocalIsDark provides dark,
         LocalDensity provides scaledDensity,
     ) {
-        MaterialTheme(colorScheme = scheme, typography = typography, content = content)
+        MaterialTheme(colorScheme = scheme, typography = typography, shapes = shapes, content = content)
     }
 }
+
+private val PressShapes = Shapes(
+    extraSmall = RoundedCornerShape(2.dp),
+    small = RoundedCornerShape(2.dp),
+    medium = RoundedCornerShape(3.dp),
+    large = RoundedCornerShape(4.dp),
+    extraLarge = RoundedCornerShape(4.dp),
+)
 
 /** Respeta "Quitar animaciones" de las opciones de accesibilidad del sistema. */
 @Composable

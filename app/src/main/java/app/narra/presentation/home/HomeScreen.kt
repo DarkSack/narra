@@ -1,6 +1,5 @@
 package app.narra.presentation.home
 
-import androidx.compose.animation.animateColorAsState
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -28,24 +27,25 @@ import androidx.compose.material.icons.rounded.AutoStories
 import androidx.compose.material.icons.rounded.PlayArrow
 import androidx.compose.material.icons.rounded.Search
 import androidx.compose.material.icons.rounded.WarningAmber
-import androidx.compose.material3.Button
+import app.narra.core.designsystem.component.Button
 import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.FilledTonalButton
+import app.narra.core.designsystem.component.FilledTonalButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
+import app.narra.core.designsystem.component.OutlinedButton
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.text.font.FontStyle
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
@@ -53,12 +53,12 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import app.narra.core.designsystem.component.BookRowSkeleton
 import app.narra.core.designsystem.component.CoverImage
 import app.narra.core.designsystem.component.EmptyState
-import app.narra.core.designsystem.component.NarraProgressBar
 import app.narra.core.designsystem.component.SectionHeader
-import app.narra.core.designsystem.component.rememberCoverAccent
+import app.narra.core.designsystem.component.TextToVoiceProgress
+import app.narra.core.designsystem.component.lampGlow
 import app.narra.core.designsystem.motion.sharedCover
+import app.narra.core.designsystem.theme.Literata
 import app.narra.core.designsystem.theme.NarraTheme
-import app.narra.core.designsystem.theme.narraTween
 import app.narra.core.ui.formatPercent
 import app.narra.core.ui.formatRemaining
 import app.narra.core.ui.toErrorText
@@ -102,11 +102,7 @@ fun HomeScreen(
             else -> {
                 state.continueListening?.let { current ->
                     item(key = "continue") {
-                        if (tokens.editorial) {
-                            ContinueHero(current, onPlay = { viewModel.play(current.book); onOpenPlayer() }, onOpen = { onOpenBook(current.book.id) })
-                        } else {
-                            ContinueCard(current, onPlay = { viewModel.play(current.book); onOpenPlayer() }, onOpen = { onOpenBook(current.book.id) })
-                        }
+                        ContinueHero(current, onPlay = { viewModel.play(current.book); onOpenPlayer() }, onOpen = { onOpenBook(current.book.id) })
                     }
                 }
                 if (state.needsAttention.isNotEmpty()) {
@@ -166,7 +162,7 @@ private fun HomeHeader(state: HomeUiState, onSearch: () -> Unit, onImport: () ->
             Text(state.greeting, style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
             Text(
                 state.headline,
-                style = if (tokens.editorial) MaterialTheme.typography.displaySmall else MaterialTheme.typography.headlineMedium,
+                style = MaterialTheme.typography.displaySmall,
                 modifier = Modifier.semantics { heading() },
             )
         }
@@ -175,41 +171,45 @@ private fun HomeHeader(state: HomeUiState, onSearch: () -> Unit, onImport: () ->
     }
 }
 
-/** Estilo Lectura: portada protagonista sobre un fondo teñido con su color. */
+/**
+ * El libro que estás escuchando. En Lámpara, bajo la luz cálida; en Imprenta, sobre el papel con la
+ * sombra plana de su portada. La barra de abajo es el texto que se vuelve voz.
+ */
 @Composable
 private fun ContinueHero(current: ContinueListening, onPlay: () -> Unit, onOpen: () -> Unit) {
     val book = current.book
     val tokens = NarraTheme.tokens
-    val accent by animateColorAsState(rememberCoverAccent(book.title, book.coverPath), narraTween(), label = "accent")
     Box(
         Modifier
             .fillMaxWidth()
-            .padding(horizontal = tokens.screenPadding)
-            .background(
-                Brush.verticalGradient(listOf(accent.copy(alpha = if (NarraTheme.isDark) 0.45f else 0.28f), Color.Transparent)),
-                RoundedCornerShape(tokens.cardRadius),
-            ),
+            .lampGlow(NarraTheme.colors.glow, centerY = 0.45f),
     ) {
-        Column(Modifier.padding(20.dp)) {
+        Column(Modifier.padding(horizontal = tokens.screenPadding, vertical = 12.dp)) {
             Row(verticalAlignment = Alignment.Bottom) {
                 Surface(onClick = onOpen, color = Color.Transparent) {
                     CoverImage(book.title, book.author, book.coverPath, Modifier.sharedCover(book.id), width = tokens.heroCoverWidth)
                 }
                 Spacer(Modifier.width(20.dp))
-                Column(Modifier.weight(1f)) {
+                Column(Modifier.weight(1f).padding(bottom = 4.dp)) {
+                    current.chapterTitle?.let {
+                        Text(
+                            it,
+                            style = MaterialTheme.typography.titleMedium.copy(fontFamily = Literata, fontStyle = FontStyle.Italic, fontWeight = FontWeight.Normal),
+                            color = NarraTheme.colors.rubric,
+                            maxLines = 2,
+                            overflow = TextOverflow.Ellipsis,
+                        )
+                        Spacer(Modifier.height(4.dp))
+                    }
                     Text(book.title, style = MaterialTheme.typography.headlineSmall, maxLines = 3, overflow = TextOverflow.Ellipsis)
                     book.author?.let {
                         Text(it, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
                     }
-                    current.chapterTitle?.let {
-                        Spacer(Modifier.height(8.dp))
-                        Text(it, style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.primary, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                    }
                 }
             }
             Spacer(Modifier.height(20.dp))
-            NarraProgressBar(book.listenedFraction, height = 6.dp)
-            Spacer(Modifier.height(8.dp))
+            TextToVoiceProgress(book.listenedFraction, seed = book.id.hashCode())
+            Spacer(Modifier.height(10.dp))
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Text(
                     "${formatPercent(book.listenedFraction)} · ${formatRemaining(book.remainingMs)}",
@@ -222,43 +222,6 @@ private fun ContinueHero(current: ContinueListening, onPlay: () -> Unit, onOpen:
                     Spacer(Modifier.width(6.dp))
                     Text(if (book.isStarted) "Continuar" else "Empezar")
                 }
-            }
-        }
-    }
-}
-
-/** Estilo Android Modern: tarjeta compacta y funcional. */
-@Composable
-private fun ContinueCard(current: ContinueListening, onPlay: () -> Unit, onOpen: () -> Unit) {
-    val book = current.book
-    val tokens = NarraTheme.tokens
-    Surface(
-        onClick = onOpen,
-        color = MaterialTheme.colorScheme.surfaceContainerLow,
-        shape = RoundedCornerShape(tokens.cardRadius),
-        modifier = Modifier.fillMaxWidth().padding(horizontal = tokens.screenPadding),
-    ) {
-        Row(Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
-            CoverImage(book.title, book.author, book.coverPath, Modifier.sharedCover(book.id), width = tokens.heroCoverWidth * 0.75f)
-            Spacer(Modifier.width(16.dp))
-            Column(Modifier.weight(1f)) {
-                Text(book.title, style = MaterialTheme.typography.titleMedium, maxLines = 2, overflow = TextOverflow.Ellipsis)
-                book.author?.let { Text(it, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant) }
-                current.chapterTitle?.let {
-                    Text(it, style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.primary, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                }
-                Spacer(Modifier.height(10.dp))
-                NarraProgressBar(book.listenedFraction)
-                Spacer(Modifier.height(4.dp))
-                Text(
-                    "${formatPercent(book.listenedFraction)} · ${formatRemaining(book.remainingMs)}",
-                    style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-            }
-            Spacer(Modifier.width(8.dp))
-            androidx.compose.material3.FilledIconButton(onClick = onPlay, modifier = Modifier.size(52.dp)) {
-                Icon(Icons.Rounded.PlayArrow, contentDescription = if (book.isStarted) "Continuar ${book.title}" else "Empezar ${book.title}")
             }
         }
     }

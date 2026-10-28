@@ -20,6 +20,8 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
+import androidx.compose.material3.NavigationBarItemDefaults
+import androidx.compose.ui.graphics.Color
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -48,6 +50,7 @@ import app.narra.domain.model.Paragraph
 import app.narra.domain.model.PlayableTrack
 import app.narra.domain.model.ProcessingJob
 import app.narra.domain.model.ThemeMode
+import app.narra.domain.model.UiStyle
 import app.narra.domain.model.VoiceSettings
 import app.narra.domain.repository.AudiobookExports
 import app.narra.domain.repository.BookRepository
@@ -101,7 +104,15 @@ class StoreScreenshots {
     private lateinit var chapters: Map<String, List<Chapter>>
     private lateinit var tracks: Map<String, List<PlayableTrack>>
     private lateinit var jobs: List<ProcessingJob>
-    private val settings = MutableStateFlow(AppSettings(onboardingCompleted = true, themeMode = ThemeMode.LIGHT))
+    // -Ptema=PRESS, -Ptema=LAMP:DARK…: estilo y, opcional, modo (por defecto Lámpara oscura, la cara de Narra).
+    private val tema = System.getProperty("narra.tema").orEmpty().split(':')
+    private val settings = MutableStateFlow(
+        AppSettings(
+            onboardingCompleted = true,
+            uiStyle = UiStyle.entries.firstOrNull { it.name == tema[0] } ?: UiStyle.LAMP,
+            themeMode = ThemeMode.entries.firstOrNull { it.name == tema.getOrNull(1) } ?: ThemeMode.DARK,
+        ),
+    )
 
     @Before
     fun setUp() {
@@ -309,12 +320,14 @@ class StoreScreenshots {
             containerColor = MaterialTheme.colorScheme.background,
             bottomBar = {
                 NavigationBar {
+                    val rubric = NarraTheme.colors.rubric
                     items.forEach { (label, icon, selectedIcon) ->
                         NavigationBarItem(
                             selected = label == selected,
                             onClick = {},
                             icon = { Icon(if (label == selected) selectedIcon else icon, contentDescription = null) },
                             label = { Text(label) },
+                            colors = NavigationBarItemDefaults.colors(indicatorColor = Color.Transparent, selectedIconColor = rubric, selectedTextColor = rubric),
                         )
                     }
                 }

@@ -27,41 +27,42 @@ se genera el 2*. Coste: espacio. AAC mono a 48 kbps ≈ 21 MB por hora de audio 
 
 - **Nombre:** Narra (imperativo de *narrar*: corto, pronunciable en español e inglés).
 - **Tagline:** «Tus libros, en voz alta.»
-- **Concepto:** la lámpara de lectura nocturna. Tinta (índigo profundo) y luz cálida (ámbar).
+- **Concepto:** el texto que se vuelve voz, leído a la luz de una lámpara.
 - **Personalidad:** serena, literaria, precisa. Habla claro y en segunda persona, nunca técnico.
 - **Icono:** un libro abierto cuyas páginas se convierten en ondas de sonido.
 - **Tipografía:** *Literata* (serif editorial de Google, OFL) para títulos y portadas; *Inter*
   (OFL) para la interfaz. Ambas incluidas en la app como fuentes variables, funcionan sin red.
-- **Paleta:**
+- **Firma visual:** `TextToVoiceProgress`. En las barras de progreso grandes (inicio, libro,
+  reproductor, creación del audio), lo hecho es una onda de sonido y lo que falta son renglones de
+  palabras sin leer.
 
-| Rol | Claro | Oscuro |
+### Dos temas (mismo estado, distinta identidad)
+
+Se elige en Ajustes → Apariencia → Estilo (`UiStyle`). Cada uno tiene versión clara y oscura
+(Sistema / Claro / Oscuro); la composición de las pantallas es la misma.
+
+| | Lámpara (predeterminado) | Imprenta |
 |---|---|---|
-| Primario «tinta» | `#4B45C6` | `#C4C1FF` |
-| Acento «lámpara» | `#C77A12` | `#F2B45A` |
-| Disponible «salvia» | `#356854` | `#8FD1B5` |
-| Error | `#C2363B` | `#FF9E9A` |
-| Fondo | `#FBF8F2` (papel) | `#111016` (noche) |
-| Superficies | papel cálido escalonado | 5 niveles: `#17161D` → `#2D2B36` |
+| Idea | leer de noche: tinta oscura y una sola luz cálida | un libro impreso: papel, tinta negra y rojo de rúbrica |
+| Fondo oscuro / claro | `#0F0E14` / papel `#FBF8F2` | tinta `#17140F` / papel `#F3EEE3` |
+| Primario (botones) | ámbar `#F2B45A` / `#8A5500` | tinta `#1B1814` / papel `#EDE6D8` |
+| Rúbrica (capítulo, pestaña activa) | el mismo ámbar | rojo `#B53A25` / `#F08A6E` |
+| Titulares | Literata redonda | Literata cursiva (sintetizada: solo se incluye la redonda) |
+| Formas | botones píldora, tarjetas de 24 dp | esquinas de 2–4 dp, botones casi rectos |
+| Portadas generadas | libro de tela con lomo, filete dorado y ✦ | papel con franja de color, autor en versalitas y ❦; sombra plana desplazada |
+| Fondo de lo que suena | halo de luz cálida (`lampGlow`) | nada: el papel |
+
+El índigo «tinta» `#4B45C6` / `#C4C1FF` sigue como color secundario de Lámpara (estado
+«procesando»); salvia y error son comunes a los dos temas.
 
 El tema oscuro no invierte colores: las superficies suben de luminosidad con la elevación, el
-texto primario es `#ECEAF2` (no blanco puro), los acentos bajan de saturación y las portadas
-reciben un velo para no deslumbrar.
-
-Los colores de la tabla que se usan como texto (tinta, lámpara en claro `#8A5500`, salvia, error)
-cumplen un contraste mínimo de 4,5:1 sobre todas las superficies del tema. Las pantallas
+texto no es blanco puro y las portadas reciben un velo para no deslumbrar. Los colores que se usan
+como texto cumplen un contraste mínimo de 4,5:1 sobre las superficies de su tema. Las pantallas
 principales se auditan con el Accessibility Test Framework de Google
 (`AccessibilityAuditTest` y `OnboardingAccessibilityTest`).
 
-### Dos estilos de interfaz (mismo estado, distinta composición)
-
-| | Android Modern | Lectura |
-|---|---|---|
-| Densidad | media, listas y tarjetas | aireada, portadas protagonistas |
-| Portadas | 56–96 dp, esquinas 12 dp | 140–280 dp, sombra de libro, fondo teñido con el color de la portada |
-| Títulos | Inter | Literata |
-| Movimiento | transiciones cortas del sistema | elementos compartidos, fundidos más largos |
-
-Ambos leen `LocalNarraStyle` y los mismos `UiState`; cambiar de estilo no cambia la funcionalidad.
+Las capturas de Play se sacan con `StoreScreenshots`; `-Ptema=PRESS:LIGHT` (o `LAMP:DARK`,
+el predeterminado) elige tema y modo.
 
 ## 3. Arquitectura
 

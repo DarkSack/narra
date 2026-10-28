@@ -39,7 +39,11 @@ import androidx.compose.material3.SnackbarResult
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.adaptive.currentWindowAdaptiveInfo
+import androidx.compose.material3.NavigationBarItemDefaults
+import androidx.compose.material3.NavigationRailItemDefaults
+import androidx.compose.material3.adaptive.navigationsuite.NavigationSuiteDefaults
 import androidx.compose.material3.adaptive.navigationsuite.NavigationSuiteScaffold
+import androidx.compose.ui.graphics.Color
 import androidx.compose.material3.adaptive.navigationsuite.NavigationSuiteScaffoldDefaults
 import androidx.compose.material3.adaptive.navigationsuite.NavigationSuiteType
 import androidx.compose.runtime.Composable
@@ -170,6 +174,20 @@ fun NarraApp(viewModel: AppViewModel, settings: AppSettings) {
         val bottomOverlay: Dp = (if (showMini) MINI_PLAYER_SPACE else 0.dp) +
             (if (suiteType == NavigationSuiteType.NavigationBar) 0.dp else systemBottom)
 
+        // Sin la píldora de Material: la pestaña activa se enciende con el color de rúbrica del tema.
+        val rubric = NarraTheme.colors.rubric
+        val navColors = NavigationSuiteDefaults.itemColors(
+            navigationBarItemColors = NavigationBarItemDefaults.colors(
+                indicatorColor = Color.Transparent,
+                selectedIconColor = rubric,
+                selectedTextColor = rubric,
+            ),
+            navigationRailItemColors = NavigationRailItemDefaults.colors(
+                indicatorColor = Color.Transparent,
+                selectedIconColor = rubric,
+                selectedTextColor = rubric,
+            ),
+        )
         NavigationSuiteScaffold(
             layoutType = suiteType,
             navigationSuiteItems = {
@@ -180,6 +198,7 @@ fun NarraApp(viewModel: AppViewModel, settings: AppSettings) {
                         onClick = { navController.navigateTopLevel(item.route) },
                         icon = { Icon(if (selected) item.selectedIcon else item.icon, contentDescription = null) },
                         label = { Text(item.label) },
+                        colors = navColors,
                     )
                 }
             },
