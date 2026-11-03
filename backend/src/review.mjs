@@ -6,7 +6,23 @@ import { join } from 'node:path';
 import { platform,unwrap,patchBook,removeObject } from './platform.mjs';
 import { scan } from './antivirus.mjs';
 const [action,id,confirmation]=process.argv.slice(2);
-if (!['approve','reject'].includes(action) || !/^[a-f0-9-]{36}$/i.test(id ?? '') || confirmation!=='--reviewed') throw new Error('Uso: npm run review -- approve|reject ID --reviewed. Revisa el libro completo antes de aprobar.');
+if (action==='list') {
+  const client=platform();
+  const pending=unwrap(await client.database.from('catalog_books').select('id,title,reason').eq('status','review').order('created_at').limit(100));
+  console.log(`Pendientes de revisión: ${pending.length}`);
+  for (const book of pending) console.log(`  ${book.id}  ${book.title} — ${book.reason ?? ''}`);
+  // Por debajo del umbral el libro sigue publicado: aquí se ven esas denuncias.
+  const reports=unwrap(await client.database.from('catalog_reports').select('book_id,reason,trusted,created_at').order('created_at',{ascending:false}).limit(1000));
+  const ids=[...new Set(reports.map(report=>report.book_id))];
+  const published=ids.length ? unwrap(await client.database.from('catalog_books').select('id,title,reviewed_at').eq('status','published').in('id',ids)) : [];
+  console.log('Publicados con denuncias desde su última aprobación:');
+  for (const book of published) {
+    const open=reports.filter(report=>report.book_id===book.id && Date.parse(report.created_at)>Date.parse(book.reviewed_at));
+    if (open.length) console.log(`  ${book.id}  ${book.title} — ${open.length} (${open.filter(report=>report.trusted).length} de cuentas con antigüedad): ${open.map(report=>report.reason.slice(0,80)).join(' | ')}`);
+  }
+  process.exit(0);
+}
+if (!['approve','reject'].includes(action) || !/^[a-f0-9-]{36}$/i.test(id ?? '') || confirmation!=='--reviewed') throw new Error('Uso: npm run review -- list | approve|reject ID --reviewed. Revisa el libro completo antes de aprobar.');
 const client=platform();
 const [book]=unwrap(await client.database.from('catalog_books').select('*').eq('id',id).eq('status','review').limit(1));
 if (!book) throw new Error('El libro no está pendiente de revisión');

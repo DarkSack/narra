@@ -5,15 +5,30 @@ import { mkdtemp, rm } from 'node:fs/promises';
 import { createWriteStream, openAsBlob } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { Readable } from 'node:stream';
+import { Readable, Transform } from 'node:stream';
 import { pipeline } from 'node:stream/promises';
-import { randomUUID } from 'node:crypto';
+import { randomUUID, createHash } from 'node:crypto';
 import { platform, unwrap, patchBook, removeObject, sha256, PUBLIC_COLUMNS } from './platform.mjs';
 import { metadata, validateUploadHeaders, PdfStream, PolicyError, MAX_BYTES } from './policy.mjs';
 
 const MAX_TRANSFERS = 3;
 const REPORTS_TO_HIDE = 3;
 const REPORTS_PER_DAY = 10;
+// Una cuenta recién creada denuncia, pero no cuenta para retirar un libro sin revisión humana.
+const TRUSTED_ACCOUNT_AGE = 7 * 86400_000;
+// Sin tope fijo de 180 s: una conexión lenta de verdad termina; una que gotea no retiene su hueco.
+const MIN_TRANSFER_RATE = 64 * 1024;
+const UPLOAD_TIME_LIMIT = 30 * 60_000;
+export function watchRate(bytes, abort) {
+  const started = Date.now();
+  const timer = setInterval(() => {
+    const seconds = (Date.now()-started)/1000;
+    if (seconds > 60 && bytes() < seconds*MIN_TRANSFER_RATE) abort();
+  }, 5000);
+  return () => clearInterval(timer);
+}
+// Quien bloquea no necesita el id de la otra cuenta: basta un valor que solo sirve para desbloquear.
+const blockToken = (userId, blockedId) => createHash('sha256').update(`${userId}:${blockedId}`).digest('hex').slice(0,32);
 
 export function createApp(client = platform()) {
   const app = express();
@@ -34,7 +49,7 @@ export function createApp(client = platform()) {
       if (!response.ok) return res.sendStatus(response.status === 401 ? 401 : 503);
       const { user } = await response.json();
       if (!user?.id || user.role && user.role !== 'authenticated') return res.sendStatus(403);
-      req.userId = user.id; next();
+      req.userId = user.id; req.userCreatedAt = Date.parse(user.createdAt); next();
     } catch { res.sendStatus(503); }
   });
   const userLimits = rateLimit({ windowMs: 60_000, limit: 60, keyGenerator: req => req.userId });
@@ -76,7 +91,9 @@ export function createApp(client = platform()) {
     try {
       const file = join(work,'source.pdf');
       const guard = new PdfStream();
-      await pipeline(req, guard, createWriteStream(file, { mode:0o600 }));
+      const stop = watchRate(() => guard.bytes, () => req.destroy(new PolicyError('La conexión es demasiado lenta para subir el PDF',408)));
+      try { await pipeline(req, guard, createWriteStream(file, { mode:0o600 })); }
+      finally { stop(); }
       // Se lee del disco al subir: el PDF nunca está entero en memoria.
       unwrap(await client.storage.from('quarantine').upload(key, await openAsBlob(file,{type:'application/pdf'})));
       await patchBook(client,id,{ status:'queued',source_key:key,original_bytes:guard.bytes },'uploading');
@@ -101,7 +118,11 @@ export function createApp(client = platform()) {
     const live = unwrap(await client.database.from('catalog_books').select('id').eq('id',id).eq('status','published').limit(1));
     if (!live.length) return res.sendStatus(404);
     res.set({'Content-Type':'application/pdf','Content-Length':String(blob.size),'Content-Disposition':`attachment; filename="${id}.pdf"`,'X-PDF-SHA256':book.sha256});
-    await pipeline(Readable.fromWeb(blob.stream()), res);
+    let sent = 0;
+    const meter = new Transform({ transform(chunk,_,done) { sent += chunk.length; done(null,chunk); } });
+    const stop = watchRate(() => sent, () => res.destroy());
+    try { await pipeline(Readable.fromWeb(blob.stream()), meter, res); }
+    finally { stop(); }
   }));
   app.post('/books/:id/report', express.json({limit:'8kb'}), async (req,res) => {
     const reason = req.body?.reason;
@@ -113,9 +134,10 @@ export function createApp(client = platform()) {
     if (unwrap(await reports().select('id').eq('book_id',book.id).eq('reporter_id',req.userId).limit(1)).length) return res.sendStatus(204);
     const today = unwrap(await reports().select('id').eq('reporter_id',req.userId).gt('created_at',new Date(Date.now()-86400_000).toISOString()).limit(REPORTS_PER_DAY));
     if (today.length>=REPORTS_PER_DAY) throw new PolicyError('Has enviado muchas denuncias hoy. Inténtalo mañana',429);
-    unwrap(await reports().insert([{book_id:book.id,reporter_id:req.userId,reason:reason.trim()}]));
-    // Una sola cuenta no retira un libro: hacen falta varias denuncias desde su última aprobación.
-    const recent = unwrap(await reports().select('id').eq('book_id',book.id).gt('created_at',book.reviewed_at).limit(REPORTS_TO_HIDE));
+    const trusted = Date.now()-req.userCreatedAt >= TRUSTED_ACCOUNT_AGE; // fecha ausente: NaN, no cuenta
+    unwrap(await reports().insert([{book_id:book.id,reporter_id:req.userId,reason:reason.trim(),trusted}]));
+    // Una sola cuenta no retira un libro: hacen falta varias cuentas con antigüedad desde su última aprobación.
+    const recent = unwrap(await reports().select('id').eq('book_id',book.id).eq('trusted',true).gt('created_at',book.reviewed_at).limit(REPORTS_TO_HIDE));
     if (recent.length>=REPORTS_TO_HIDE) await patchBook(client,book.id,{status:'review',reason:'Pendiente de revisar varias denuncias',reviewed_at:null},'published');
     res.sendStatus(204);
   });
@@ -129,10 +151,13 @@ export function createApp(client = platform()) {
     res.sendStatus(204);
   });
   app.get('/me/blocks', async (req,res)=> {
-    res.json(unwrap(await client.database.from('catalog_blocks').select('blocked_id,label').eq('user_id',req.userId).limit(1000)));
+    const rows = unwrap(await client.database.from('catalog_blocks').select('blocked_id,label').eq('user_id',req.userId).limit(1000));
+    res.json(rows.map(b=>({id:blockToken(req.userId,b.blocked_id),label:b.label})));
   });
   app.delete('/me/blocks/:id', async (req,res)=> {
-    unwrap(await client.database.from('catalog_blocks').delete().eq('user_id',req.userId).eq('blocked_id',req.params.id));
+    const rows = unwrap(await client.database.from('catalog_blocks').select('blocked_id').eq('user_id',req.userId).limit(1000));
+    const block = rows.find(b=>blockToken(req.userId,b.blocked_id)===req.params.id);
+    if (block) unwrap(await client.database.from('catalog_blocks').delete().eq('user_id',req.userId).eq('blocked_id',block.blocked_id));
     res.sendStatus(204);
   });
   app.delete('/me/books/:id', async (req,res) => {
@@ -172,7 +197,7 @@ export function createApp(client = platform()) {
 }
 if (process.env.NODE_ENV !== 'test') {
   const server = createApp().listen(Number(process.env.PORT ?? 8080),'0.0.0.0');
-  server.requestTimeout = 180_000;
+  server.requestTimeout = UPLOAD_TIME_LIMIT; // la subida lenta se corta por velocidad, no por reloj
   server.headersTimeout = 15_000;
   server.timeout = 180_000;
 }

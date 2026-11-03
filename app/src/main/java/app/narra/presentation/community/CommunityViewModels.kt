@@ -6,6 +6,7 @@ import androidx.lifecycle.viewModelScope
 import app.narra.data.community.CommunityRepository
 import app.narra.data.community.SharedBook
 import app.narra.data.community.BlockedPublisher
+import app.narra.data.community.PreparedShare
 import app.narra.domain.repository.BookRepository
 import app.narra.domain.repository.ImportRepository
 import app.narra.domain.repository.ImportResult
@@ -18,7 +19,18 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.launch
+import java.net.SocketException
+import java.net.SocketTimeoutException
+import java.net.UnknownHostException
 import javax.inject.Inject
+import javax.net.ssl.SSLException
+
+// Los errores de red de Android vienen en inglés y sin contexto.
+private fun Exception.userMessage() = when (this) {
+    is SocketException, is UnknownHostException, is SocketTimeoutException, is SSLException ->
+        "No se pudo conectar o se cortó la conexión. Revisa tu red e inténtalo otra vez"
+    else -> message ?: "No se pudo conectar con el servicio"
+}
 
 enum class AccountMode { LOGIN, REGISTER, VERIFY, RESET_REQUEST, RESET_FINISH }
 @HiltViewModel
@@ -52,7 +64,7 @@ class AccountViewModel @Inject constructor(private val repository: CommunityRepo
         busy.value=true; message.value=null; failed.value=false
         viewModelScope.launch {
             try { action() } catch(e: CancellationException) { throw e }
-            catch(e: Exception) { failed.value=true; message.value=e.message ?: "No se pudo conectar con el servicio" }
+            catch(e: Exception) { failed.value=true; message.value=e.userMessage() }
             finally { busy.value=false }
         }
     }
@@ -87,8 +99,19 @@ class CatalogViewModel @Inject constructor(
         val next=repository.books(before.query,before.mine,if(more) before.books.size else 0)
         state.value=state.value.copy(books=if(more) (before.books+next).distinctBy { it.id } else next,hasMore=next.size==30)
     }
-    fun upload(uri: Uri,title: String,author: String) = run {
-        repository.upload(uri,title.trim(),author.trim()) { sent ->
+    /** El PDF elegido, ya validado, mientras se rellena el formulario de compartir. */
+    val share=MutableStateFlow<PreparedShare?>(null)
+    fun prepare(uri: Uri) = run { share.value=repository.prepare(uri) }
+    fun cancelShare() { share.value?.file?.delete(); share.value=null }
+    override fun onCleared() { share.value?.file?.delete() }
+    fun upload(title: String,author: String) {
+        val prepared=share.value ?: return
+        if (state.value.busy) return
+        share.value=null
+        upload(prepared,title,author)
+    }
+    private fun upload(prepared: PreparedShare,title: String,author: String) = run {
+        repository.upload(prepared,title.trim(),author.trim()) { sent ->
             val percent=(sent*100).toInt()/100f // un cambio por punto, no por bloque enviado
             if (state.value.progress!=percent) state.value=state.value.copy(progress=percent)
         }
@@ -122,7 +145,7 @@ class CatalogViewModel @Inject constructor(
         state.value=state.value.copy(busy=true,message=null,failed=false)
         viewModelScope.launch {
             try { action() } catch(e: CancellationException) { throw e }
-            catch(e: Exception) { state.value=state.value.copy(failed=true,message=e.message ?: "No se pudo conectar con el servicio") }
+            catch(e: Exception) { state.value=state.value.copy(failed=true,message=e.userMessage()) }
             finally { state.value=state.value.copy(busy=false,progress=null) }
         }
     }

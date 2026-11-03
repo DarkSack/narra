@@ -34,6 +34,8 @@ data class SharedBook(
     val sha256: String, val pages: Int, val mine: Boolean = false,
 )
 data class BlockedPublisher(val id: String, val label: String)
+/** PDF ya copiado y validado para compartir, con el título y autor que trae su ficha. */
+class PreparedShare(val file: File, val title: String, val author: String)
 private class ApiFailure(val status: Int, message: String) : Exception(message)
 
 @Singleton
@@ -98,12 +100,10 @@ class CommunityRepository @Inject constructor(
         return action(fresh)
     }
     suspend fun books(query: String, mine: Boolean, offset: Int = 0): List<SharedBook> = withContext(Dispatchers.IO) {
+        // Sin la API del catálogo no hay nada que listar: sus tablas no se leen con el token del usuario.
+        if (!sharingAvailable) return@withContext emptyList()
         authorized { token ->
-            val url = if (sharingAvailable) "${BuildConfig.CATALOG_URL}/${if (mine) "me/books" else "books"}?q=${encode(query)}&offset=$offset" else {
-                val columns="id,title,author,description,status,reason,original_bytes,pdf_bytes,sha256,pages,created_at"
-                val filter = if (mine) "owner_id=eq.${session!!.getJSONObject("user").getString("id")}" else "status=eq.published"
-                "${BuildConfig.INSFORGE_URL}/api/database/records/catalog_books?select=$columns&$filter&order=created_at.desc,id.asc&limit=30&offset=$offset"
-            }
+            val url = "${BuildConfig.CATALOG_URL}/${if (mine) "me/books" else "books"}?q=${encode(query)}&offset=$offset"
             val array = JSONArray(request(url,token=token))
             List(array.length()) { index -> array.getJSONObject(index).let { b ->
                 SharedBook(b.getString("id"),b.getString("title"),b.optString("author"),b.optString("description"),
@@ -112,26 +112,39 @@ class CommunityRepository @Inject constructor(
             } }
         }
     }
-    suspend fun upload(uri: Uri, title: String, author: String, onProgress: (Float) -> Unit) = withContext(Dispatchers.IO) {
+    /** Copia y valida el PDF al elegirlo: los errores salen antes de rellenar el formulario. */
+    suspend fun prepare(uri: Uri): PreparedShare = withContext(Dispatchers.IO) {
         require(sharingAvailable) { "Compartir libros todavía no está disponible" }
+        sweep("upload-") // restos de una subida que el sistema cortó
         val file = File.createTempFile("upload-", ".pdf",context.cacheDir)
         try {
             var name = "libro.pdf"
             context.contentResolver.query(uri,arrayOf(OpenableColumns.DISPLAY_NAME),null,null,null)?.use { cursor ->
                 if (cursor.moveToFirst()) name = cursor.getString(0) ?: name
             }
-            try {
+            val info = try {
                 PdfIntakePolicy.validateName(name,context.contentResolver.getType(uri))
                 val input = context.contentResolver.openInputStream(uri) ?: error("No se pudo abrir el archivo")
                 input.use { source -> file.outputStream().use { PdfIntakePolicy.copy(source,it) } }
                 // Las mismas reglas que el servidor, antes de gastar datos y cupo.
                 val document = try { PDDocument.load(file, MemoryUsageSetting.setupTempFileOnly()) }
                     catch (e: IOException) { throw IllegalArgumentException("No se pudo leer el PDF o está protegido con contraseña", e) }
-                document.use(PdfStructurePolicy::validate)
+                document.use { doc ->
+                    PdfStructurePolicy.validate(doc)
+                    runCatching { doc.documentInformation.let { it.title to it.author } }.getOrNull()
+                }
             } catch (e: NarraException) { throw IllegalArgumentException(shareError(e.kind), e) }
-            authorized { token -> request("${BuildConfig.CATALOG_URL}/books?filename=libro.pdf&title=${encode(title)}&author=${encode(author)}&rights=true&consent=true", "POST", token, file=file, onProgress=onProgress) }
-        } finally { file.delete() }
+            // La ficha del PDF suele traer título y autor; un título que es un nombre de archivo no sirve.
+            val title = info?.first?.trim()?.takeUnless { it.isBlank() || it.startsWith("Microsoft") || Regex("""\.\w{2,4}$""").containsMatchIn(it) }
+                ?: name.substringBeforeLast('.').replace('_',' ').trim()
+            PreparedShare(file, title.take(160), info?.second?.trim().orEmpty().take(160))
+        } catch (e: Exception) { file.delete(); throw e }
     }
+    suspend fun upload(share: PreparedShare, title: String, author: String, onProgress: (Float) -> Unit) = withContext(Dispatchers.IO) {
+        try { authorized { token -> request("${BuildConfig.CATALOG_URL}/books?filename=libro.pdf&title=${encode(title)}&author=${encode(author)}&rights=true&consent=true", "POST", token, file=share.file, onProgress=onProgress) } }
+        finally { share.file.delete() }
+    }
+    private fun sweep(prefix: String) = context.cacheDir.listFiles { file -> file.name.startsWith(prefix) }?.forEach { it.delete() }
     private fun shareError(kind: ErrorKind) = when (kind) {
         ErrorKind.PDF_TOO_LARGE -> "Para compartir, el PDF debe pesar hasta 100 MB y tener hasta ${PdfStructurePolicy.MAX_PAGES} páginas"
         ErrorKind.PDF_ENCRYPTED -> "No se pueden compartir PDF protegidos"
@@ -141,6 +154,7 @@ class CommunityRepository @Inject constructor(
     suspend fun download(book: SharedBook): File = withContext(Dispatchers.IO) {
         require(sharingAvailable) { "Las descargas todavía no están disponibles" }
         require(book.status=="published" && book.sha256.matches(Regex("[a-f0-9]{64}"))) { "Este libro no está aprobado" }
+        sweep("download-") // restos de una descarga que el sistema cortó
         val target = File.createTempFile("download-", ".pdf",context.cacheDir)
         try {
             authorized { token ->
@@ -170,7 +184,7 @@ class CommunityRepository @Inject constructor(
     suspend fun blocked(): List<BlockedPublisher> = withContext(Dispatchers.IO) {
         authorized { token ->
             val array=JSONArray(request("${BuildConfig.CATALOG_URL}/me/blocks",token=token))
-            List(array.length()) { index -> array.getJSONObject(index).let { BlockedPublisher(it.getString("blocked_id"),it.getString("label")) } }
+            List(array.length()) { index -> array.getJSONObject(index).let { BlockedPublisher(it.getString("id"),it.getString("label")) } }
         }
     }
     suspend fun unblock(id: String) = withContext(Dispatchers.IO) {

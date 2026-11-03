@@ -1,7 +1,5 @@
 package app.narra.presentation.community
 
-import android.net.Uri
-import android.provider.OpenableColumns
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.*
@@ -14,7 +12,6 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
@@ -30,10 +27,10 @@ fun CatalogScreen(onAccount: () -> Unit, onOpenBook: (String, Boolean) -> Unit, 
     val email by viewModel.email.collectAsStateWithLifecycle()
     val state by viewModel.state.collectAsStateWithLifecycle()
     val plus=LocalPlus.current
-    var upload by remember { mutableStateOf<Uri?>(null) }
+    val share by viewModel.share.collectAsStateWithLifecycle()
     var report by remember { mutableStateOf<SharedBook?>(null) }
     var withdraw by remember { mutableStateOf<SharedBook?>(null) }
-    val picker=rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { upload=it }
+    val picker=rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri -> uri?.let(viewModel::prepare) }
     LifecycleResumeEffect(email) { viewModel.refresh(); onPauseOrDispose {} }
     LaunchedEffect(viewModel) { viewModel.events.collect { event -> when(event) {
         is CatalogEvent.Open -> onOpenBook(event.id,event.review)
@@ -95,12 +92,7 @@ fun CatalogScreen(onAccount: () -> Unit, onOpenBook: (String, Boolean) -> Unit, 
         if(state.hasMore && !state.busy) item { TextButton(onClick={viewModel.refresh(true)}){Text("Ver más libros")} }
         item { Text("Los PDF compartidos pasan por antivirus, reconstrucción y revisión de contenido. Estas comprobaciones reducen riesgos, pero pueden fallar. Denuncia cualquier contenido inapropiado.",style=MaterialTheme.typography.bodySmall) }
     }
-    val context=LocalContext.current
-    upload?.let { uri ->
-        // El nombre del archivo como título inicial: casi siempre es el del libro.
-        val name=remember(uri) { runCatching { context.contentResolver.query(uri,arrayOf(OpenableColumns.DISPLAY_NAME),null,null,null)?.use { if(it.moveToFirst()) it.getString(0) else null } }.getOrNull() }
-        ShareDialog(initialTitle=name?.substringBeforeLast('.')?.replace('_',' ')?.trim().orEmpty(),onDismiss={upload=null},onShare={title,author->upload=null;viewModel.upload(uri,title,author)})
-    }
+    share?.let { prepared -> ShareDialog(prepared.title,prepared.author,onDismiss=viewModel::cancelShare,onShare=viewModel::upload) }
     report?.let { book -> ReportDialog(onDismiss={report=null},onReport={reason->report=null;viewModel.report(book,reason)}) }
     withdraw?.let { book -> AlertDialog(onDismissRequest={withdraw=null},title={Text("¿Retirar «${book.title}»?")},text={Text("Se retirará del catálogo y se eliminará la copia compartida. Las descargas anteriores se conservan en sus teléfonos.")},confirmButton={TextButton(onClick={withdraw=null;viewModel.withdraw(book)}){Text("Retirar")}},dismissButton={TextButton(onClick={withdraw=null}){Text("Cancelar")}}) }
 }
@@ -110,8 +102,8 @@ private fun statusLabel(value: String)=when(value) {
     "review"->"Pendiente de revisión humana";"published"->"Publicado";"rejected"->"No aprobado";else->"Bloqueado"
 }
 @Composable
-private fun ShareDialog(initialTitle: String,onDismiss: () -> Unit,onShare: (String,String) -> Unit) {
-    var title by remember { mutableStateOf(initialTitle.take(160)) }; var author by remember { mutableStateOf("") }
+private fun ShareDialog(initialTitle: String,initialAuthor: String,onDismiss: () -> Unit,onShare: (String,String) -> Unit) {
+    var title by remember { mutableStateOf(initialTitle) }; var author by remember { mutableStateOf(initialAuthor) }
     var rights by remember { mutableStateOf(false) }; var consent by remember { mutableStateOf(false) }
     AlertDialog(onDismissRequest=onDismiss,title={Text("Compartir un PDF")},text={Column(Modifier.verticalScroll(rememberScrollState()),verticalArrangement=Arrangement.spacedBy(12.dp)) {
         Text("Solo PDF, hasta 100 MB y 500 páginas. Se comprimirá y revisará antes de aparecer en el catálogo.")

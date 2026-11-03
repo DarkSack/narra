@@ -19,8 +19,9 @@ solo se comunica con el worker en red interna, sin claves ni salida a Internet. 
 
 El host necesita unos 6 GB de RAM y espacio temporal. El worker es único; su mantenimiento limpia
 trabajos interrumpidos. Para escalar, coordina el mantenimiento y usa límites de peticiones
-compartidos; el rate limiter actual vive en memoria de una única instancia de API. En el proxy
-limita también tamaño de petición a 100 MiB y tiempo a 180 segundos.
+compartidos; el rate limiter actual vive en memoria de una única instancia de API. El proxy limita
+la petición a 100 MiB; la API corta una transferencia por debajo de 64 KiB/s tras el primer minuto
+(con tope de 30 min), así una conexión lenta de verdad termina y una que gotea no retiene su hueco.
 
 Para el VPS, una vez elegido el dominio y apuntado su DNS, añade `NARRA_DOMAIN` al `.env` privado.
 `compose.production.yaml` incorpora Caddy para HTTPS automático. Después de revisar puertos,
@@ -45,13 +46,15 @@ privada desde el panel administrativo, revisar **todas** las páginas y su texto
 y contenido, y ejecutar desde el entorno privado del worker:
 
 ```sh
+npm run review -- list
 npm run review -- approve UUID --reviewed
 npm run review -- reject UUID --reviewed
 ```
 
 La aprobación comprueba hash y tamaño y vuelve a pasar antivirus. Tres denunciantes distintos
-desde la última aprobación pasan el libro publicado a `review` hasta resolución; las denuncias
-anteriores al umbral se consultan en `catalog_reports`. Los originales nunca se distribuyen.
+con cuentas de al menos 7 días, desde la última aprobación, pasan el libro publicado a `review`
+hasta resolución. `list` muestra los pendientes y los publicados con denuncias por debajo del
+umbral o de cuentas nuevas. Los originales nunca se distribuyen.
 
 ## Validación
 

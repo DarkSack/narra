@@ -19,13 +19,14 @@
     vuelve a comprobar firma, tamaño y SHA-256; copia el PDF a su biblioteca y abre la revisión
     habitual para elegir voz y crear audio local.
 
-Los clientes no pueden escribir tablas del catálogo, modificar estados, reclamar trabajos ni
+Los clientes no pueden leer ni escribir tablas del catálogo con su token (todo pasa por la API, que
+nunca expone al propietario ni a quién bloqueó otra persona), modificar estados, reclamar trabajos ni
 acceder a claves de Storage. No se generan enlaces públicos o firmados para clientes; una retirada
 revoca nuevas descargas. No puede retirar las copias ya descargadas.
-Puedes denunciar contenido o bloquear a quien lo compartió. Con 3 denunciantes distintos desde la
-última aprobación el libro pasa a `review`; cada cuenta envía hasta 10 denuncias al día y no puede
-denunciar sus propios libros. Las denuncias por debajo de ese umbral quedan en `catalog_reports`
-para el operador. Bloquear oculta los libros de esa persona y rechaza sus descargas para tu cuenta;
+Puedes denunciar contenido o bloquear a quien lo compartió. Con 3 denunciantes distintos, con cuentas de al
+menos 7 días, desde la última aprobación el libro pasa a `review`; cada cuenta envía hasta 10
+denuncias al día y no puede denunciar sus propios libros. Las demás denuncias (por debajo del umbral
+o de cuentas nuevas) se listan con `npm run review -- list`. Bloquear oculta los libros de esa persona y rechaza sus descargas para tu cuenta;
 los bloqueos se gestionan desde Tu cuenta.
 
 ## Compresión y límites
