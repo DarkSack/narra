@@ -77,6 +77,7 @@ import app.narra.core.designsystem.theme.NarraTheme
 import app.narra.domain.model.AppSettings
 import app.narra.presentation.AppEvent
 import app.narra.presentation.AppViewModel
+import app.narra.data.community.CATALOG_ENABLED
 import app.narra.presentation.about.LicensesScreen
 import app.narra.presentation.community.AccountScreen
 import app.narra.presentation.community.CatalogScreen
@@ -111,10 +112,10 @@ private data class TopLevelDestination(
     val selectedIcon: ImageVector,
 )
 
-private val TOP_LEVEL = listOf(
+private val TOP_LEVEL = listOfNotNull(
     TopLevelDestination(HomeRoute, HomeRoute::class, "Inicio", Icons.Outlined.Home, Icons.Rounded.Home),
     TopLevelDestination(LibraryRoute, LibraryRoute::class, "Biblioteca", Icons.AutoMirrored.Outlined.LibraryBooks, Icons.AutoMirrored.Rounded.LibraryBooks),
-    TopLevelDestination(CatalogRoute, CatalogRoute::class, "Catálogo", Icons.Outlined.Public, Icons.Rounded.Public),
+    TopLevelDestination(CatalogRoute, CatalogRoute::class, "Catálogo", Icons.Outlined.Public, Icons.Rounded.Public).takeIf { CATALOG_ENABLED },
     TopLevelDestination(SettingsRoute, SettingsRoute::class, "Ajustes", Icons.Outlined.Settings, Icons.Rounded.Settings),
 )
 

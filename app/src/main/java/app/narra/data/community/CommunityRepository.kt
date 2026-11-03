@@ -28,6 +28,9 @@ import javax.net.ssl.HttpsURLConnection
 import javax.inject.Inject
 import javax.inject.Singleton
 
+/** El catálogo solo existe en compilaciones con `narra.catalogUrl`: sin él no hay pestaña ni cuenta. */
+val CATALOG_ENABLED = BuildConfig.CATALOG_URL.isNotBlank()
+
 data class SharedBook(
     val id: String, val title: String, val author: String, val description: String,
     val status: String, val reason: String?, val bytes: Long, val originalBytes: Long,
@@ -47,7 +50,7 @@ class CommunityRepository @Inject constructor(
     private val refreshLock = Mutex()
     private val _email = MutableStateFlow(session?.optJSONObject("user")?.optString("email")?.takeIf { it.isNotBlank() })
     val email = _email.asStateFlow()
-    val sharingAvailable get() = BuildConfig.CATALOG_URL.isNotBlank()
+    val sharingAvailable get() = CATALOG_ENABLED
 
     suspend fun authenticate(email: String, password: String, register: Boolean): Boolean = withContext(Dispatchers.IO) {
         require(email.contains('@') && email.length <= 254) { "Escribe un correo válido" }

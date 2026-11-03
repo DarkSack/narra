@@ -1,5 +1,6 @@
 package app.narra.presentation.onboarding
 
+import app.narra.data.community.CATALOG_ENABLED
 import android.Manifest
 import android.content.pm.PackageManager
 import android.os.Build
@@ -232,7 +233,7 @@ private fun WhatItNeeds() {
     Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
         Icon(Icons.Rounded.Lock, contentDescription = null, modifier = Modifier.size(16.dp), tint = MaterialTheme.colorScheme.onSurfaceVariant)
         Text(
-            "El audio se queda en tu teléfono. Compartir un PDF es opcional.",
+            if (CATALOG_ENABLED) "El audio se queda en tu teléfono. Compartir un PDF es opcional." else "Tus libros y su audio no salen del teléfono.",
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )

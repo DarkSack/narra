@@ -1,5 +1,6 @@
 package app.narra.presentation.settings
 
+import app.narra.data.community.CATALOG_ENABLED
 import androidx.compose.foundation.border
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -112,8 +113,10 @@ fun SettingsScreen(
             )
         }
 
-        item { Group("Comunidad") }
-        item { NavigationSetting("Tu cuenta", "Comparte PDF y descarga libros del catálogo", onOpenAccount) }
+        if (CATALOG_ENABLED) {
+            item { Group("Comunidad") }
+            item { NavigationSetting("Tu cuenta", "Comparte PDF y descarga libros del catálogo", onOpenAccount) }
+        }
         item { Group("Narra Plus") }
         item {
             val plus = LocalPlus.current
@@ -319,8 +322,10 @@ private fun PrivacyDialog(onDismiss: () -> Unit) {
         title = { Text("Tu privacidad") },
         text = {
             Text(
-                "Los libros de uso personal y el audio se guardan en este teléfono. Si decides compartir un PDF, " +
-                    "se sube al servidor y se envían sus páginas y texto al servicio de moderación. Solo la copia revisada se comparte en el catálogo. Nunca subimos audios.\n\n" +
+                (if (CATALOG_ENABLED) "Los libros de uso personal y el audio se guardan en este teléfono. Si decides compartir un PDF, " +
+                    "se sube al servidor y se envían sus páginas y texto al servicio de moderación. Solo la copia revisada se comparte en el catálogo. Nunca subimos audios.\n\n"
+                else "Tus PDF, su texto y el audio se guardan solo en este teléfono. Narra no tiene cuentas, ni servidores, " +
+                    "ni publicidad.\n\n") +
                     "Las voces del teléfono funcionan sin conexión. Si eliges una voz marcada «en línea», el motor de voz " +
                     "de su fabricante recibe el texto para leerlo.\n\n" +
                     "El reconocimiento de páginas escaneadas usa ML Kit de Google en el propio teléfono: las páginas no " +
