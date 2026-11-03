@@ -199,7 +199,7 @@ private fun Location(modifier: Modifier = Modifier) {
     Row(modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
         Icon(Icons.Rounded.Lock, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(20.dp))
         Text(
-            "Tus libros se guardan en el almacenamiento interno de Narra: otras apps no pueden leerlos y no salen del teléfono. " +
+            "Tu biblioteca y el audio se guardan en el almacenamiento interno de Narra. Solo se sube el PDF que decidas compartir en el catálogo. " +
                 "Para copiar un audiolibro a otra carpeta, ábrelo y elige «Exportar audio».",
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,

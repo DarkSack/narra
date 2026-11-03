@@ -232,7 +232,7 @@ private fun WhatItNeeds() {
     Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
         Icon(Icons.Rounded.Lock, contentDescription = null, modifier = Modifier.size(16.dp), tint = MaterialTheme.colorScheme.onSurfaceVariant)
         Text(
-            "Tus libros y su audio no salen del teléfono.",
+            "El audio se queda en tu teléfono. Compartir un PDF es opcional.",
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )

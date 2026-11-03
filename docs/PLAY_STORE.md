@@ -9,8 +9,8 @@ Todo lo que pide Play Console, listo para copiar. Lo que solo puede hacer el due
 |---|---|
 | Archivo para Play | `E:\Dev\pdf-audiobooks\app\build\outputs\bundle\playRelease\app-play-release.aab` (canal `play`; se sube este, no un APK) |
 | Generarlo | `./gradlew :app:bundlePlayRelease` |
-| Paquete y versión | `app.narra`, versionName 3.1.0, versionCode 4 |
-| SDK | mínimo 26, objetivo 36 (Play exige 36 desde el 31 de agosto de 2026) |
+| Paquete y versión del checkout | `app.narra`, versionName 3.3.0, versionCode 5; antes de subir, comprobar el mayor código publicado y asignar uno superior |
+| SDK | mínimo 26, objetivo 36; revisar los requisitos vigentes en Play Console al subir |
 | Páginas de 16 KB | ✅ todas las bibliotecas nativas, incluida la de ML Kit (≈ 11 MB por arquitectura) |
 | Llave de subida | `C:\Users\Sack\.android-keys\narra-upload.jks`; contraseña en `keystore.properties` (fuera de git) |
 | Huella SHA-256 | `A3:EE:25:55:F6:C4:76:71:A3:6C:60:29:C2:91:35:96:0E:30:67:22:FB:39:7F:37:49:76:22:9B:6A:40:0F:34` |
@@ -37,15 +37,25 @@ Primera versión en Google Play.
 </es-419>
 ```
 
-## 2. Ficha de Play Store (español de México)
+## 2. Ficha de Play Store (español de Latinoamérica, es-419)
+
+Actualizada el 30 de octubre de 2026. Los textos preparados para la próxima versión están en
+[`play/listing/es-419`](../play/listing/es-419). Usar esos archivos para copiar a Play Console.
+La cuenta y el catálogo se identifican como **en preparación**: no anunciar subidas, descargas
+ni publicación disponibles hasta conectar el VPS y distribuir la versión que las habilite.
+
+Las notas de 3.1.0 arriba se conservan como historial; las nuevas están en
+[`release-notes.txt`](../play/listing/es-419/release-notes.txt).
 
 **Nombre** (30 máx.): `Narra: PDF a audiolibro`
 
 **Descripción breve** (80 máx.):
 
-> Convierte tus PDF en audiolibros con las voces de tu teléfono, sin subirlos.
+> Convierte PDF en audiolibros por capítulos y escúchalos en tu teléfono.
 
-**Descripción completa:**
+**Descripción completa:** usar el archivo
+[`full-description.txt`](../play/listing/es-419/full-description.txt), que incluye el estado real
+del catálogo. El siguiente texto se conserva como referencia de las funciones locales:
 
 > Narra convierte tus PDF en audiolibros organizados por capítulos, en tu propio teléfono.
 >
@@ -70,8 +80,8 @@ Primera versión en Google Play.
 > • Reconoce el texto de PDF escaneados, en el propio teléfono.
 >
 > PRIVACIDAD
-> • Tus PDF y el audio se quedan en tu teléfono: Narra no los sube a ningún servidor.
-> • Sin cuenta y sin anuncios.
+> • El audio se crea y se queda en tu teléfono. Compartir un PDF en el catálogo es opcional.
+> • Biblioteca personal sin cuenta y sin anuncios. El catálogo compartido está en preparación.
 
 **Categoría:** Libros y obras de consulta. **Etiquetas:** audiolibros, lector de PDF, texto a voz.
 **Correo de contacto:** donsackito@protonmail.com, el mismo de la política de privacidad (si lo cambias, cámbialo en las dos).
@@ -104,8 +114,8 @@ subir este bundle a un canal de prueba y crear el producto único **`narra_plus`
 |---|---|
 | Política de privacidad | https://shop.sackito.online/privacidad/narra (copia de [PRIVACIDAD.md](PRIVACIDAD.md) en `lib/privacidad-apps.ts` de rpgroll-shop: si cambia una, cambiar la otra) |
 | Anuncios | No contiene anuncios |
-| Acceso a la app | Toda la funcionalidad está disponible sin restricciones (no hay cuenta; Plus es una compra, no un acceso) |
-| Clasificación de contenido | Cuestionario IARC, categoría «Utilidades, productividad, comunicación u otros». Compras digitales: **Sí**. Lo demás «No»: sin violencia, sexo, lenguaje, drogas, apuestas, interacción entre usuarios ni ubicación |
+| Acceso a la app | Biblioteca personal sin cuenta. Antes de enviar una versión con cuentas, declarar el acceso restringido del catálogo y proporcionar a revisión una cuenta de prueba válida, sin publicarla en la ficha |
+| Clasificación de contenido | Revisar el cuestionario IARC para la versión que se distribuye. Plus implica compras digitales; el catálogo añade contenido de usuarios. No reutilizar automáticamente las respuestas de la versión solo local |
 | Público objetivo | 13 años o más. «¿Puede atraer a niños?»: No |
 | Funciones financieras | «Mi app no ofrece funciones financieras» (vender Plus con Google Play no cuenta) |
 | Apps gubernamentales, salud, noticias | No |
@@ -114,16 +124,16 @@ subir este bundle a un canal de prueba y crear el producto único **`narra_plus`
 
 ## 5. Seguridad de los datos
 
-Narra no tiene servidor ni código de red propio en el canal `play`. Aun así, Play cuenta lo que
-envían las bibliotecas que trae. ML Kit, el reconocimiento de texto, manda a Google datos de
-diagnóstico cada vez que se usa
+Narra incorpora cuentas y un catálogo opcional de PDF. La declaración anterior, que decía que
+no tenía servidor, debe sustituirse antes de publicar esta versión. También hay que contar lo
+que envían las bibliotecas. ML Kit manda a Google diagnósticos al reconocer texto
 ([lo que declara Google](https://developers.google.com/ml-kit/android-data-disclosure)).
 
 | Pregunta | Respuesta |
 |---|---|
 | ¿Recopila o comparte alguno de los tipos de datos? | **Sí** |
-| ¿Todos los datos se cifran en tránsito? | Sí (ML Kit usa HTTPS) |
-| ¿Ofreces una forma de pedir que se borren los datos? | No (no hay cuentas; los diagnósticos no identifican a la persona) |
+| ¿Todos los datos se cifran en tránsito? | La app usa HTTPS; verificar también la configuración del servidor desplegado |
+| ¿Ofreces una forma de pedir que se borren los datos? | Sí: eliminación dentro de la app y solicitud por correo; configurar también la URL externa requerida por Play |
 
 Tipos de datos que se marcan:
 
@@ -131,10 +141,13 @@ Tipos de datos que se marcan:
 |---|---|---|---|---|---|
 | Información y rendimiento de la app → Diagnóstico | Sí | No | No | Obligatorio | Estadísticas |
 | Dispositivo u otros identificadores → ID del dispositivo u otros IDs | Sí | No | No | Obligatorio | Estadísticas |
+| Información personal → correo e identificador de usuario | Sí | Revisar tratamiento de proveedores | No | Opcional (cuenta) | Gestión de cuentas y seguridad |
+| Archivos y documentos → PDF, texto y metadatos compartidos | Sí | Revisar excepciones para proveedores y publicación solicitada | No | Opcional (compartir) | Funcionalidad y moderación |
 
 Lo que **no** se marca, y por qué:
 
-- **Archivos y documentos** (los PDF), **audio** y el texto de los libros: no salen del teléfono.
+- **Audio generado por Narra**: no se sube al servidor. Los PDF de uso personal tampoco se suben;
+  los compartidos y el texto/imágenes enviados a moderación sí se declaran.
 - **Historial de compras**: Play Billing habla con la app de Play Store dentro del teléfono; Narra solo
   consulta si Plus está comprado y no lo envía a ningún lado. Los datos de pago los recoge Google
   directamente.
@@ -145,6 +158,14 @@ Lo que **no** se marca, y por qué:
 
 Si cambias de versión de ML Kit o agregas una biblioteca con red, revisa este formulario antes de
 subir la versión.
+
+Antes de activar el catálogo en Play, revisar la [declaración de datos](https://support.google.com/googleplay/android-developer/answer/10787469)
+según los contratos reales de InsForge/OpenRouter/proveedor del modelo. La tabla anterior es una
+guía de implementación, no sustituye el formulario ni verifica por sí misma cumplimiento.
+La app incorpora denuncia de contenido, bloqueo/desbloqueo del publicador, consentimiento antes
+de compartir y eliminación de cuenta; revisar también la [política UGC](https://support.google.com/googleplay/android-developer/answer/9876937).
+Publicar la política actualizada y una página externa para solicitar eliminación, completar la
+clasificación de contenido y probar el servicio completo antes de subir una nueva versión.
 
 ## 6. Servicios en primer plano
 

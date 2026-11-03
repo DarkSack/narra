@@ -1,0 +1,27 @@
+Tus libros, en voz alta. Narra transforma tus PDF en audiolibros organizados por capítulos con las voces de tu teléfono. Importa un libro, revisa el texto y empieza a escuchar mientras se crea el audio.
+
+DEL PDF AL AUDIOLIBRO
+• Detecta título, autor, portada, idioma y capítulos a partir del índice del PDF, del índice impreso o de sus títulos.
+• Limpia encabezados, pies de página y números de página para mejorar la lectura en voz alta.
+• Renombra, reordena o excluye capítulos y revisa el texto antes de crear el audio.
+• Elige voz, velocidad y tono entre las voces disponibles en tu teléfono.
+
+ESCUCHA A TU RITMO
+• El audio se genera por capítulos en segundo plano. Puedes escuchar el primero mientras se crean los demás.
+• Ajusta la velocidad, utiliza el temporizador para dormir y avanza o retrocede con saltos configurables.
+• Controla la reproducción desde la notificación, la pantalla de bloqueo o los widgets de Inicio.
+• Retoma cada libro desde tu progreso guardado.
+
+EL AUDIO SE QUEDA CONTIGO
+La conversión y los archivos de audio se guardan en tu teléfono. Con las voces descargadas puedes crear y escuchar audiolibros sin conexión. Las voces marcadas «en línea» pueden necesitar Internet y enviar el texto al proveedor del motor de voz.
+
+CUENTA Y CATÁLOGO: EN PREPARACIÓN
+Estamos preparando cuentas verificadas y un catálogo para compartir únicamente PDF. Las subidas y descargas de libros compartidos todavía no están habilitadas.
+Cuando se active, cada usuario descargará el PDF y creará el audiolibro en su teléfono. No se compartirán audios ni se guardarán en el servidor. Los PDF compartidos pasarán por validación, antivirus, reconstrucción y revisión de contenido antes de publicarse. Estas comprobaciones reducen riesgos, pero no garantizan que todo archivo esté libre de amenazas o contenido inapropiado.
+
+NARRA PLUS: COMPRA ÚNICA
+• Libros sin límite en tu biblioteca; sin Plus puedes conservar hasta 3 libros a la vez.
+• Exporta el audio en M4A por capítulos y su portada.
+• Reconoce el texto de PDF escaneados en el propio teléfono.
+
+La biblioteca personal funciona sin cuenta y no tiene anuncios. Comparte únicamente libros de dominio público o aquellos que tengas permiso para distribuir. La calidad del texto reconocido y de la voz depende del PDF y del motor de voz disponible.

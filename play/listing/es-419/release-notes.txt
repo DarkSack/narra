@@ -1,0 +1,5 @@
+• Nueva sección Catálogo y acceso a cuenta con verificación de correo.
+• El catálogo compartido está en preparación: las subidas y descargas aún no están habilitadas.
+• Se compartirán solo PDF; cada teléfono creará y guardará su propio audio.
+• Nuevos límites y validaciones para importar PDF y detectar contenido activo.
+• Avisos de privacidad actualizados.

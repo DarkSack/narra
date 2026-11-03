@@ -12,7 +12,31 @@ App de Android que convierte tus PDF en audiolibros organizados, en el teléfono
 - **Exporta** el audiolibro a la carpeta que elijas: un M4A por capítulo y la portada.
 - **PDF escaneados:** reconoce el texto de las páginas en el propio teléfono.
 
-El PDF nunca sale del teléfono.
+El uso personal sigue funcionando sin cuenta. Solo se sube el PDF que decidas compartir en el
+catálogo; el audio se genera y conserva en cada teléfono, nunca se sube al servidor.
+
+## Cuentas y catálogo compartido
+
+La pestaña **Catálogo** permite crear una cuenta con correo verificado, publicar un PDF con permiso
+de distribución, consultar sus revisiones, descargar libros y denunciarlos. La descarga vuelve al
+flujo habitual de revisión y creación del audiolibro local. En **Ajustes → Tu cuenta** puedes cerrar
+sesión, recuperar la contraseña y eliminar tu cuenta y sus publicaciones.
+
+El proyecto InsForge **Narra** está configurado con tablas protegidas y buckets privados. La API,
+el worker, ClamAV y el reconstructor están en [`backend`](backend/README.md). Las subidas y descargas
+permanecen desactivadas hasta compilar con la URL HTTPS del servicio validado:
+
+```powershell
+.\gradlew.bat :app:assembleInternaDebug -Pnarra.catalogUrl=https://tu-servicio
+```
+
+Solo se admiten PDF de hasta 100 MB (500 páginas para compartir; 1.500 para uso local). El original
+se mantiene en cuarentena privada; solo se distribuye una copia reconstruida con OCR, analizada
+con antivirus y moderada página a página, tras aprobación humana. La reconstrucción comprime
+imágenes a 120 ppp con JPEG/PNG adaptativo y conserva texto reconocido; puede perder precisión y aumentar el tamaño
+de documentos originalmente vectoriales. Ningún análisis garantiza ausencia total de riesgos.
+
+Los detalles de operación, retención y límites están en [docs/CATALOGO.md](docs/CATALOGO.md).
 
 ## Tecnología
 

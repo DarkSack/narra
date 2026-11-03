@@ -9,6 +9,8 @@ enum class ErrorKind {
     PDF_ENCRYPTED,
     PDF_CORRUPT,
     PDF_EMPTY,
+    PDF_UNSAFE,
+    PDF_TOO_LARGE,
     NO_TEXT,
     OCR_FAILED,
     TTS_UNAVAILABLE,
