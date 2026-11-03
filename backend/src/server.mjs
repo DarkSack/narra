@@ -4,12 +4,14 @@ import rateLimit from 'express-rate-limit';
 import { mkdtemp, rm } from 'node:fs/promises';
 import { createWriteStream, openAsBlob } from 'node:fs';
 import { tmpdir } from 'node:os';
-import { join } from 'node:path';
+import { join, dirname } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { Readable, Transform } from 'node:stream';
 import { pipeline } from 'node:stream/promises';
-import { randomUUID, createHash } from 'node:crypto';
+import { randomUUID, createHash, timingSafeEqual } from 'node:crypto';
 import { platform, unwrap, patchBook, removeObject, sha256, notifyReview, PUBLIC_COLUMNS } from './platform.mjs';
 import { metadata, validateUploadHeaders, PdfStream, PolicyError, MAX_BYTES } from './policy.mjs';
+import { reviewQueue, decide } from './review.mjs';
 
 const MAX_TRANSFERS = 3;
 const REPORTS_TO_HIDE = 3;
@@ -30,6 +32,35 @@ export function watchRate(bytes, abort) {
 // Quien bloquea no necesita el id de la otra cuenta: basta un valor que solo sirve para desbloquear.
 const blockToken = (userId, blockedId) => createHash('sha256').update(`${userId}:${blockedId}`).digest('hex').slice(0,32);
 
+const digest = text => createHash('sha256').update(text).digest();
+/** Panel de revisión: contraseña ADMIN_PASSWORD por HTTP Basic (el usuario da igual). Sin ella, no existe. */
+function adminPanel(client) {
+  const admin = express.Router();
+  admin.use(rateLimit({ windowMs: 15*60_000, limit: 10, skipSuccessfulRequests: true }), (req, res, next) => {
+    if (!process.env.ADMIN_PASSWORD) return res.sendStatus(404);
+    const basic = /^Basic ([A-Za-z0-9+/=]+)$/.exec(req.headers.authorization ?? '')?.[1];
+    const password = basic ? Buffer.from(basic,'base64').toString().replace(/^[^:]*:/,'') : '';
+    if (!timingSafeEqual(digest(password), digest(process.env.ADMIN_PASSWORD))) return res.set('WWW-Authenticate','Basic realm="Narra", charset="UTF-8"').sendStatus(401);
+    // El navegador manda la contraseña sola: un formulario de otro sitio no puede poner esta cabecera.
+    if (req.method !== 'GET' && req.get('X-Narra-Admin') !== '1') return res.sendStatus(403);
+    next();
+  });
+  admin.use(express.static(join(dirname(fileURLToPath(import.meta.url)),'admin')));
+  admin.get('/queue', async (_req, res) => res.json(await reviewQueue(client)));
+  admin.get('/books/:id/pdf', async (req, res) => {
+    if (!/^[a-f0-9-]{36}$/i.test(req.params.id)) return res.sendStatus(404);
+    const [book] = unwrap(await client.database.from('catalog_books').select('pdf_key').eq('id',req.params.id).in('status',['review','published']).limit(1));
+    if (!book?.pdf_key) return res.sendStatus(404);
+    const blob = unwrap(await client.storage.from('books').download(book.pdf_key));
+    res.set({'Content-Type':'application/pdf','Content-Length':String(blob.size),'Content-Disposition':`inline; filename="${req.params.id}.pdf"`});
+    // La CSP de helmet (object-src 'none') puede dejar en blanco el visor de PDF de Chrome; nosniff sigue.
+    res.removeHeader('Content-Security-Policy');
+    await pipeline(Readable.fromWeb(blob.stream()), res);
+  });
+  admin.post('/books/:id/:action', async (req, res) => { await decide(client, req.params.action, req.params.id); res.sendStatus(204); });
+  return admin;
+}
+
 export function createApp(client = platform()) {
   const app = express();
   app.disable('x-powered-by');
@@ -39,6 +70,7 @@ export function createApp(client = platform()) {
   app.use((_req, res, next) => { res.set('Cache-Control', 'no-store'); next(); });
   app.get('/health', (_req, res) => res.json({ ok: true }));
   app.use(rateLimit({ windowMs: 60_000, limit: 120 }));
+  app.use('/admin', adminPanel(client));
   app.use(async (req, res, next) => {
     const token = req.headers.authorization;
     if (!/^Bearer [A-Za-z0-9._-]+$/.test(token ?? '')) return res.sendStatus(401);

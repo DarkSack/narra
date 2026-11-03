@@ -39,15 +39,13 @@ narra.sackito.online {
 ```
 
 Para actualizar, vuelve a copiar el directorio y ejecuta `docker compose up -d --build api worker`.
-Prueba de humo contra producción (crea una cuenta de usar y tirar, sube, aprueba, descarga y
-borra todo; necesita la red de la API y la de ClamAV, que usa la aprobación):
+Prueba de humo contra producción (crea una cuenta de usar y tirar, sube, aprueba por el panel,
+descarga y borra todo; manda un aviso real a `REVIEW_EMAIL`):
 
 ```sh
-docker create --name narra-e2e --env-file .env -e CLAMD_HOST=clamav --network narra-catalog_edge \
+docker run --rm --env-file .env --network narra-catalog_edge \
   -v /opt/narra-catalog/test/produccion.e2e.mjs:/app/test/produccion.e2e.mjs:ro \
   narra-catalog-worker node test/produccion.e2e.mjs
-docker network connect narra-catalog_scan narra-e2e
-docker start -a narra-e2e; docker rm narra-e2e
 ```
 
 Solo deben ser públicos SSH, 80 y 443. Los puertos de renderer y ClamAV quedan en redes internas.
@@ -59,9 +57,16 @@ conserva desactivadas las subidas.
 
 ## Moderación humana
 
-El worker deja los libros en `review`, nunca `published`. Un operador debe descargar la copia
-privada desde el panel administrativo, revisar **todas** las páginas y su texto, comprobar derechos
-y contenido, y ejecutar desde el entorno privado del worker:
+El worker deja los libros en `review`, nunca `published`. Un operador abre la copia revisada,
+revisa **todas** las páginas y su texto, comprueba derechos y contenido, y aprueba o rechaza.
+
+**Panel web:** `https://narra.sackito.online/admin/`, con la contraseña `ADMIN_PASSWORD` del `.env`
+(HTTP Basic; el usuario da igual). Sin esa variable el panel no existe (404). Muestra pendientes y
+publicados con denuncias, abre el PDF y pide marcar «Revisé todas las páginas» antes de aprobar.
+Los POST exigen la cabecera `X-Narra-Admin` (contra CSRF) y la API admite 10 contraseñas malas
+cada 15 minutos por IP. Para cambiarla, edita el `.env` y ejecuta `docker compose up -d api`.
+
+**Desde la terminal**, en el entorno privado del worker:
 
 ```sh
 npm run review -- list

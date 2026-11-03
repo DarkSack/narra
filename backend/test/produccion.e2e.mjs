@@ -1,9 +1,9 @@
 // Prueba de humo contra el catálogo desplegado (ver backend/README.md): usuario confirmado de usar y
-// tirar, subida real, ClamAV + reconstrucción + moderación reales, aprobación, descarga íntegra y,
+// tirar, subida real, ClamAV + reconstrucción + moderación reales, aprobación por el panel /admin
+// (ADMIN_PASSWORD), descarga íntegra y,
 // al final, DELETE /me, que borra el libro, sus archivos y el usuario.
 import assert from 'node:assert/strict';
 import { createHash, randomBytes } from 'node:crypto';
-import { execFileSync } from 'node:child_process';
 const API = process.env.CATALOG_API ?? 'http://api:8080';
 const { INSFORGE_URL, INSFORGE_API_KEY } = process.env;
 const email = `narra-e2e-${Date.now()}@example.com`;
@@ -48,7 +48,10 @@ try {
     if (!['uploading','queued','processing'].includes(book?.status)) break;
   }
   assert.equal(book?.status, 'review', book?.reason);
-  execFileSync('node', ['src/review.mjs','approve',book.id,'--reviewed'], { stdio:'inherit' });
+  const admin = { Authorization:`Basic ${Buffer.from(`narra:${process.env.ADMIN_PASSWORD}`).toString('base64')}`, 'X-Narra-Admin':'1' };
+  assert.ok((await read(await fetch(`${API}/admin/queue`, { headers:admin }))).pending?.some(row => row.id === book.id), 'el libro no sale en el panel');
+  const approved = await fetch(`${API}/admin/books/${book.id}/approve`, { method:'POST', headers:admin });
+  assert.equal(approved.status, 204, JSON.stringify(await read(approved)));
   const listed = (await read(await fetch(`${API}/books`, { headers:auth }))).find(row => row.id === book.id);
   assert.equal(listed?.mine, true);
   assert.equal('owner_id' in listed, false);
@@ -61,7 +64,7 @@ try {
   const bytes = Buffer.from(await download.arrayBuffer());
   assert.equal(createHash('sha256').update(bytes).digest('hex'), download.headers.get('x-pdf-sha256'));
   assert.equal(bytes.subarray(0,5).toString(), '%PDF-');
-  console.log(`PASS: subida, comprobaciones reales, aprobación y descarga íntegra (${bytes.length} bytes)`);
+  console.log(`PASS: subida, comprobaciones reales, aprobación en el panel y descarga íntegra (${bytes.length} bytes)`);
 } finally {
   const gone = await fetch(`${API}/me`, { method:'DELETE', headers:auth });
   console.log(gone.status === 204 ? 'Cuenta de prueba y su libro borrados' : `OJO: no se borró la cuenta de prueba ${email} (${gone.status})`);

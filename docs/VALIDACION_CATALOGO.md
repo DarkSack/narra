@@ -33,7 +33,8 @@ SHA-256: `6A3400F1F0B2EE76E478B980EB43AF18EE96E87D2D5AEB9B55FEE9DEF4F8B832`.
 - API, worker, reconstructor y ClamAV en el VPS (`/opt/narra-catalog`), la API solo en
   `127.0.0.1:8080` detrás del Caddy del sistema (`narra.sackito.online`); ver backend/README.md.
 - `backend/test/produccion.e2e.mjs` pasó contra producción: cuenta de usar y tirar, subida, ClamAV,
-  reconstrucción y moderación reales, libro en `review`, aprobación, listado sin `owner_id`,
+  reconstrucción y moderación reales, libro en `review`, aprobación (desde el mismo día, por el panel
+  `/admin`, que vuelve a pasar ClamAV desde la API), listado sin `owner_id`,
   denuncia del propio libro rechazada (422), descarga con SHA-256 correcto y borrado de la cuenta.
 - El aviso al operador sale por Resend (el plan gratis de InsForge rechaza correos propios con 403);
   Resend aceptó el correo de prueba.

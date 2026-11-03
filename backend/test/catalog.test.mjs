@@ -13,7 +13,7 @@ function database(tables) {
   return { from(name) {
     const filters=[]; let insert, update, remove;
     const q={select:()=>q,order:()=>q,limit:()=>q,range:()=>q,not:()=>q,or:()=>q,ilike:()=>q,
-      eq(k,v){filters.push(r=>r[k]===v);return q},gt(k,v){filters.push(r=>r[k]>v);return q},
+      eq(k,v){filters.push(r=>r[k]===v);return q},gt(k,v){filters.push(r=>r[k]>v);return q},in(k,v){filters.push(r=>v.includes(r[k]));return q},
       insert(rows){insert=rows;return q},update(values){update=values;return q},delete(){remove=true;return q},
       then(resolve){
         const rows=tables[name]??=[];
@@ -129,4 +129,32 @@ test('aviso de revisión: escapa el título y nunca hace fallar al que llama',as
     globalThis.fetch=originalFetch;
     for (const key of ['RESEND_API_KEY','EMAIL_FROM','REVIEW_EMAIL']) delete process.env[key];
   }
+});
+
+test('panel de revisión: sin contraseña no existe; con ella lista, abre y rechaza; los POST piden la cabecera',async()=> {
+  const tables={catalog_books:[{id,title:'Pendiente',status:'review',owner_id:'autor',pdf_key:'k.pdf',checks_passed:true}],catalog_reports:[]};
+  const removed=[];
+  const storage={from:()=>({download:async()=>({data:new Blob(['%PDF-1.7']),error:null}),remove:async key=>{ removed.push(key); return {error:null}; }})};
+  await serve({database:database(tables),storage},async call=> {
+    const admin=(path,password,init={})=>call(`/admin${path}`,'x',{...init,headers:{Authorization:password ? `Basic ${Buffer.from(`narra:${password}`).toString('base64')}` : '',...init.headers}});
+    const send={method:'POST',headers:{'X-Narra-Admin':'1'}};
+    assert.equal((await admin('/queue','cualquiera')).status,404);
+    process.env.ADMIN_PASSWORD='clave-de-prueba';
+    try {
+      const anonymous=await admin('/queue');
+      assert.equal(anonymous.status,401);
+      assert.match(anonymous.headers.get('www-authenticate'),/^Basic/);
+      assert.equal((await admin('/queue','otra')).status,401);
+      assert.deepEqual((await (await admin('/queue','clave-de-prueba')).json()).pending.map(b=>[b.title,b.reports.length]),[['Pendiente',0]]);
+      assert.match(await (await admin('/','clave-de-prueba')).text(),/Narra · Revisión/);
+      assert.equal(await (await admin(`/books/${id}/pdf`,'clave-de-prueba')).text(),'%PDF-1.7');
+      assert.equal((await admin(`/books/${id}/reject`,'clave-de-prueba',{method:'POST'})).status,403);
+      assert.equal(tables.catalog_books[0].status,'review');
+      assert.equal((await admin(`/books/${id}/reject`,'clave-de-prueba',send)).status,204);
+      assert.equal(tables.catalog_books[0].status,'rejected');
+      assert.deepEqual(removed,['k.pdf']);
+      assert.equal((await admin(`/books/${id}/approve`,'clave-de-prueba',send)).status,409);
+      assert.equal((await admin(`/books/${id}/publicar`,'clave-de-prueba',send)).status,404);
+    } finally { delete process.env.ADMIN_PASSWORD; }
+  });
 });
