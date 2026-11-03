@@ -6,6 +6,8 @@ import android.provider.OpenableColumns
 import app.narra.data.db.BookEntity
 import app.narra.data.db.NarraDatabase
 import app.narra.data.files.BookStorage
+import app.narra.data.pdf.PdfIntakePolicy
+import app.narra.domain.model.NarraException
 import app.narra.domain.model.BookState
 import app.narra.domain.model.ErrorKind
 import app.narra.domain.repository.ImportRepository
@@ -35,6 +37,14 @@ class ImportRepositoryImpl @Inject constructor(
     override suspend fun importPdf(uri: Uri, allowDuplicate: Boolean): ImportResult = withContext(Dispatchers.IO) {
         val (displayName, declaredSize) = describe(uri)
         val fileName = displayName ?: uri.lastPathSegment?.substringAfterLast('/') ?: DEFAULT_FILE_NAME
+        try {
+            PdfIntakePolicy.validateName(fileName, context.contentResolver.getType(uri))
+        } catch (e: NarraException) {
+            return@withContext ImportResult.Failed(e.kind)
+        }
+        if (declaredSize != null && declaredSize > PdfIntakePolicy.MAX_BYTES) {
+            return@withContext ImportResult.Failed(ErrorKind.PDF_TOO_LARGE)
+        }
 
         if (!allowDuplicate && declaredSize != null) {
             db.bookDao().findBySource(fileName, declaredSize)?.let {
@@ -51,6 +61,9 @@ class ImportRepositoryImpl @Inject constructor(
         val copied = try {
             storage.ensureBookDir(id)
             copy(uri, target)
+        } catch (e: NarraException) {
+            storage.deleteBook(id)
+            return@withContext ImportResult.Failed(e.kind)
         } catch (e: FileNotFoundException) {
             storage.deleteBook(id)
             return@withContext ImportResult.Failed(ErrorKind.FILE_MISSING)
@@ -115,7 +128,12 @@ class ImportRepositoryImpl @Inject constructor(
     private fun copy(uri: Uri, target: File): Long {
         val partial = File(target.parentFile, "${target.name}.part")
         val input = context.contentResolver.openInputStream(uri) ?: throw FileNotFoundException(uri.toString())
-        val bytes = input.use { source -> partial.outputStream().use { source.copyTo(it, BUFFER_SIZE) } }
+        val bytes = try {
+            input.use { source -> partial.outputStream().use { PdfIntakePolicy.copy(source, it) } }
+        } catch (e: Exception) {
+            partial.delete()
+            throw e
+        }
         if (!partial.renameTo(target)) {
             partial.delete()
             throw IOException("No se pudo mover el PDF a su sitio")

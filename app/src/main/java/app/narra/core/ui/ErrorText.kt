@@ -14,6 +14,14 @@ data class ErrorText(
 )
 
 fun ErrorKind.toErrorText(): ErrorText = when (this) {
+    ErrorKind.PDF_UNSAFE -> ErrorText(
+        "No es un PDF", "Narra solo importa archivos PDF.",
+        RecoveryAction.CHOOSE_ANOTHER_FILE, "Elegir otro archivo",
+    )
+    ErrorKind.PDF_TOO_LARGE -> ErrorText(
+        "PDF demasiado grande", "El límite es de 100 MB y 1.500 páginas. Divide el libro para importarlo.",
+        RecoveryAction.CHOOSE_ANOTHER_FILE, "Elegir otro archivo",
+    )
     ErrorKind.STORAGE_FULL -> ErrorText(
         title = "No hay suficiente espacio",
         explanation = "El teléfono se quedó sin espacio para seguir generando el audiolibro. Lo ya generado se conserva.",

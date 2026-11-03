@@ -23,9 +23,14 @@ android {
         applicationId = "app.narra"
         minSdk = 26
         targetSdk = 36
-        versionCode = 4
-        versionName = "3.1.0"
+        versionCode = 5
+        versionName = "3.3.0"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+        // Solo URL públicas. Las claves administrativas y de moderación van en el servidor.
+        buildConfigField("String", "INSFORGE_URL", "\"https://mtm799h4.us-east.insforge.app\"")
+        val catalogUrl = providers.gradleProperty("narra.catalogUrl").getOrElse("")
+        require(catalogUrl.isEmpty() || Regex("https://[A-Za-z0-9.-]+(?::[0-9]+)?").matches(catalogUrl))
+        buildConfigField("String", "CATALOG_URL", "\"$catalogUrl\"")
     }
 
     signingConfigs {

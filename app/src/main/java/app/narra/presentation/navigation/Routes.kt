@@ -9,6 +9,8 @@ import kotlinx.serialization.Serializable
 @Serializable data object LibraryRoute
 
 @Serializable data object SettingsRoute
+@Serializable data object CatalogRoute
+@Serializable data object AccountRoute
 
 @Serializable data class BookRoute(val bookId: String)
 

@@ -1,0 +1,62 @@
+# Topología de referencia para un servidor con Docker; no publica servicios de análisis.
+name: narra-catalog
+services:
+  api:
+    build: .
+    env_file: .env
+    networks: [edge]
+    ports: ["127.0.0.1:8080:8080"]
+    read_only: true
+    tmpfs: ["/tmp:size=256m,mode=1777"]
+    cap_drop: [ALL]
+    security_opt: ["no-new-privileges:true"]
+    mem_limit: 512m
+    pids_limit: 128
+    restart: unless-stopped
+  worker:
+    build: .
+    command: ["node", "src/worker.mjs"]
+    env_file: .env
+    environment:
+      RENDERER_URL: http://renderer:8090
+      CLAMD_HOST: clamav
+    networks: [default, render, scan]
+    read_only: true
+    tmpfs: ["/tmp:size=768m,mode=1777"]
+    cap_drop: [ALL]
+    security_opt: ["no-new-privileges:true"]
+    mem_limit: 768m
+    pids_limit: 128
+    restart: unless-stopped
+  renderer:
+    build: ./renderer
+    networks: [render]
+    read_only: true
+    tmpfs: ["/tmp:size=768m,mode=1777"]
+    cap_drop: [ALL]
+    security_opt: ["no-new-privileges:true"]
+    mem_limit: 2g
+    cpus: 1
+    pids_limit: 64
+    restart: unless-stopped
+  clamav:
+    image: clamav/clamav:stable
+    healthcheck:
+      test: ["CMD", "clamdscan", "--config-file=/etc/clamav/clamd.conf", "--ping", "1"]
+      interval: 30s
+      timeout: 5s
+      start_period: 120s
+      retries: 3
+    environment:
+      TZ: UTC
+    networks: [scan, default]
+    volumes: ["clamav-signatures:/var/lib/clamav", "./clamd.conf:/etc/clamav/clamd.conf:ro"]
+    mem_limit: 2g
+    pids_limit: 128
+    restart: unless-stopped
+networks:
+  edge: {}
+  render: {internal: true}
+  scan: {internal: true}
+volumes:
+  clamav-signatures:

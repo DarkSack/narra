@@ -47,6 +47,8 @@ class PdfBoxParser @Inject constructor() : PdfParser {
                 throw NarraException(ErrorKind.PDF_CORRUPT, e.message, e)
             }
             document.use { doc ->
+                // PdfBox no ejecuta acciones: la política de estructura solo se aplica al compartir.
+                if (doc.numberOfPages > PdfIntakePolicy.MAX_PAGES) throw NarraException(ErrorKind.PDF_TOO_LARGE)
                 val pageCount = doc.numberOfPages
                 if (pageCount == 0) throw NarraException(ErrorKind.PDF_EMPTY)
                 val parsed = ParsedDocument(pageCount, metadata(doc), outline(doc))

@@ -26,6 +26,8 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.LibraryBooks
 import androidx.compose.material.icons.automirrored.rounded.LibraryBooks
 import androidx.compose.material.icons.outlined.Home
+import androidx.compose.material.icons.outlined.Public
+import androidx.compose.material.icons.rounded.Public
 import androidx.compose.material.icons.outlined.Settings
 import androidx.compose.material.icons.rounded.Home
 import androidx.compose.material.icons.rounded.Settings
@@ -76,6 +78,8 @@ import app.narra.domain.model.AppSettings
 import app.narra.presentation.AppEvent
 import app.narra.presentation.AppViewModel
 import app.narra.presentation.about.LicensesScreen
+import app.narra.presentation.community.AccountScreen
+import app.narra.presentation.community.CatalogScreen
 import app.narra.presentation.book.BookDetailsScreen
 import app.narra.presentation.components.MiniPlayer
 import app.narra.presentation.home.HomeScreen
@@ -110,6 +114,7 @@ private data class TopLevelDestination(
 private val TOP_LEVEL = listOf(
     TopLevelDestination(HomeRoute, HomeRoute::class, "Inicio", Icons.Outlined.Home, Icons.Rounded.Home),
     TopLevelDestination(LibraryRoute, LibraryRoute::class, "Biblioteca", Icons.AutoMirrored.Outlined.LibraryBooks, Icons.AutoMirrored.Rounded.LibraryBooks),
+    TopLevelDestination(CatalogRoute, CatalogRoute::class, "Catálogo", Icons.Outlined.Public, Icons.Rounded.Public),
     TopLevelDestination(SettingsRoute, SettingsRoute::class, "Ajustes", Icons.Outlined.Settings, Icons.Rounded.Settings),
 )
 
@@ -367,9 +372,17 @@ private fun NarraNavHost(
                     onOpenStorage = { navController.navigate(StorageRoute) { launchSingleTop = true } },
                     onOpenLicenses = { navController.navigate(LicensesRoute) { launchSingleTop = true } },
                     onShowIntroduction = { navController.navigate(OnboardingRoute) { launchSingleTop = true } },
+                    onOpenAccount = { navController.navigate(AccountRoute) { launchSingleTop = true } },
                 )
             }
         }
+        composable<CatalogRoute> {
+            CatalogScreen(
+                onAccount = { navController.navigate(AccountRoute) { launchSingleTop = true } },
+                onOpenBook = { id, needsReview -> if (needsReview) review(id) else openBook(id) },
+            )
+        }
+        composable<AccountRoute> { AccountScreen(onBack = { navController.popBackStack() }) }
         composable<BookRoute> {
             ProvideNavAnimatedScope(this) {
                 BookDetailsScreen(

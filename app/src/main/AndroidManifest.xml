@@ -10,6 +10,7 @@
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
     <!-- Saber si hay Wi-Fi antes de usar una voz en línea. -->
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+    <uses-permission android:name="android.permission.INTERNET" />
 
     <!-- Sin esto, en Android 11+ la app no "ve" los motores de voz instalados. -->
     <queries>
@@ -21,6 +22,7 @@
     <application
         android:name=".NarraApplication"
         android:allowBackup="false"
+        android:usesCleartextTraffic="false"
         android:dataExtractionRules="@xml/data_extraction_rules"
         android:fullBackupContent="@xml/backup_rules"
         android:icon="@mipmap/ic_launcher"
