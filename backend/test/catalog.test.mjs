@@ -131,30 +131,41 @@ test('aviso de revisión: escapa el título y nunca hace fallar al que llama',as
   }
 });
 
-test('panel de revisión: sin contraseña no existe; con ella lista, abre y rechaza; los POST piden la cabecera',async()=> {
+test('panel de revisión: sin contraseña no existe; con ella entra por sesión, lista, abre y rechaza',async t=> {
   const tables={catalog_books:[{id,title:'Pendiente',status:'review',owner_id:'autor',pdf_key:'k.pdf',checks_passed:true}],catalog_reports:[]};
   const removed=[];
   const storage={from:()=>({download:async()=>({data:new Blob(['%PDF-1.7']),error:null}),remove:async key=>{ removed.push(key); return {error:null}; }})};
   await serve({database:database(tables),storage},async call=> {
-    const admin=(path,password,init={})=>call(`/admin${path}`,'x',{...init,headers:{Authorization:password ? `Basic ${Buffer.from(`narra:${password}`).toString('base64')}` : '',...init.headers}});
-    const send={method:'POST',headers:{'X-Narra-Admin':'1'}};
-    assert.equal((await admin('/queue','cualquiera')).status,404);
+    const admin=(path,init={})=>call(`/admin${path}`,'x',{...init,headers:{'X-Narra-Admin':'1',...init.headers}});
+    const enter=password=>admin('/login',{method:'POST',body:JSON.stringify({password})});
+    assert.equal((await enter('cualquiera')).status,404);
     process.env.ADMIN_PASSWORD='clave-de-prueba';
     try {
-      const anonymous=await admin('/queue');
-      assert.equal(anonymous.status,401);
-      assert.match(anonymous.headers.get('www-authenticate'),/^Basic/);
-      assert.equal((await admin('/queue','otra')).status,401);
-      assert.deepEqual((await (await admin('/queue','clave-de-prueba')).json()).pending.map(b=>[b.title,b.reports.length]),[['Pendiente',0]]);
-      assert.match(await (await admin('/','clave-de-prueba')).text(),/Narra · Revisión/);
-      assert.equal(await (await admin(`/books/${id}/pdf`,'clave-de-prueba')).text(),'%PDF-1.7');
-      assert.equal((await admin(`/books/${id}/reject`,'clave-de-prueba',{method:'POST'})).status,403);
+      assert.match(await (await admin('/')).text(),/Narra · Revisión/); // la página de entrada no pide sesión
+      assert.equal((await admin('/queue')).status,401);
+      assert.equal((await admin('/login',{method:'POST',body:JSON.stringify({password:'clave-de-prueba'}),headers:{'X-Narra-Admin':''}})).status,403);
+      assert.equal((await enter('otra')).status,401);
+      const entered=await enter('clave-de-prueba');
+      assert.equal(entered.status,204);
+      const cookie=entered.headers.get('set-cookie');
+      assert.match(cookie,/HttpOnly/); assert.match(cookie,/Secure/); assert.match(cookie,/SameSite=Strict/); assert.match(cookie,/Path=\/admin/);
+      const session={Cookie:cookie.split(';')[0]};
+      assert.equal((await admin('/queue',{headers:{Cookie:'narra_admin=99999999999999.falsa'}})).status,401);
+      assert.deepEqual((await (await admin('/queue',{headers:session})).json()).pending.map(b=>[b.title,b.reports.length]),[['Pendiente',0]]);
+      assert.equal(await (await admin(`/books/${id}/pdf`,{headers:session})).text(),'%PDF-1.7');
+      assert.equal((await admin(`/books/${id}/reject`,{method:'POST',headers:{...session,'X-Narra-Admin':''}})).status,403);
       assert.equal(tables.catalog_books[0].status,'review');
-      assert.equal((await admin(`/books/${id}/reject`,'clave-de-prueba',send)).status,204);
+      assert.equal((await admin(`/books/${id}/reject`,{method:'POST',headers:session})).status,204);
       assert.equal(tables.catalog_books[0].status,'rejected');
       assert.deepEqual(removed,['k.pdf']);
-      assert.equal((await admin(`/books/${id}/approve`,'clave-de-prueba',send)).status,409);
-      assert.equal((await admin(`/books/${id}/publicar`,'clave-de-prueba',send)).status,404);
+      assert.equal((await admin(`/books/${id}/approve`,{method:'POST',headers:session})).status,409);
+      assert.equal((await admin(`/books/${id}/publicar`,{method:'POST',headers:session})).status,404);
+      assert.match((await admin('/logout',{method:'POST',headers:session})).headers.get('set-cookie'),/narra_admin=;/);
+      process.env.ADMIN_PASSWORD='clave-nueva';
+      assert.equal((await admin('/queue',{headers:session})).status,401); // cambiar la contraseña cierra las sesiones
+      process.env.ADMIN_PASSWORD='clave-de-prueba';
+      t.mock.timers.enable({apis:['Date'],now:Date.now()+12*3600_000+1000});
+      assert.equal((await admin('/queue',{headers:session})).status,401); // caduca a las 12 horas
     } finally { delete process.env.ADMIN_PASSWORD; }
   });
 });

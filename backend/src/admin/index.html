@@ -4,43 +4,95 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="robots" content="noindex">
+<meta name="color-scheme" content="light dark">
 <title>Narra · Revisión</title>
-<style>
-  :root { --bg:#FBF8F2; --card:#FFFFFF; --text:#1F1B16; --muted:#5F574C; --line:#E4DCCD; --accent:#8A5500; --on-accent:#FFFFFF; --danger:#B3261E; color-scheme:light dark; }
-  @media (prefers-color-scheme: dark) { :root { --bg:#0F0E14; --card:#1B1A22; --text:#ECE6DA; --muted:#B4AC9F; --line:#2E2C38; --accent:#F2B45A; --on-accent:#2A1A00; --danger:#F2B8B5; } }
-  * { box-sizing:border-box; }
-  body { margin:0 auto; max-width:760px; padding:16px; background:var(--bg); color:var(--text); font:16px/1.5 system-ui, sans-serif; }
-  header { display:flex; align-items:center; justify-content:space-between; gap:12px; }
-  h1 { font-size:1.4rem; margin:0; } h2 { font-size:1.15rem; margin:28px 0 4px; } h3 { font-size:1.05rem; margin:0 0 4px; overflow-wrap:anywhere; }
-  .count { color:var(--muted); font-weight:normal; }
-  .hint, .meta, .empty, #status { color:var(--muted); font-size:.9rem; margin:4px 0; }
-  article { background:var(--card); border:1px solid var(--line); border-radius:16px; padding:16px; margin:12px 0; }
-  article p { overflow-wrap:anywhere; }
-  .reason { font-style:italic; }
-  ul { margin:4px 0 8px; padding-left:20px; }
-  label { display:flex; gap:8px; align-items:center; margin:12px 0 4px; }
-  input[type=checkbox] { width:20px; height:20px; accent-color:var(--accent); }
-  .actions { display:flex; flex-wrap:wrap; gap:8px; align-items:center; margin-top:8px; }
-  button, .actions a { min-height:44px; padding:0 18px; border-radius:999px; border:1px solid var(--line); background:transparent; color:var(--text); font:inherit; display:inline-flex; align-items:center; text-decoration:none; cursor:pointer; }
-  button.primary { background:var(--accent); color:var(--on-accent); border-color:var(--accent); }
-  button.danger { color:var(--danger); border-color:var(--danger); }
-  button:disabled { opacity:.45; cursor:default; }
-  :focus-visible { outline:3px solid var(--accent); outline-offset:2px; }
-</style>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Literata:opsz,wght@7..72,500;7..72,600&display=swap">
+<link rel="stylesheet" href="panel.css">
 <script src="panel.js" defer></script>
 </head>
 <body>
-<header><h1>Narra · Revisión</h1><button id="refresh" type="button">Actualizar</button></header>
-<p id="status" role="status" aria-live="polite"></p>
-<section id="pending">
-  <h2>Pendientes <span class="count"></span></h2>
-  <p class="hint">Abre el PDF y revisa todas las páginas y el texto antes de aprobar. Al aprobar se vuelve a pasar el antivirus y el libro queda visible en el catálogo.</p>
-  <div class="list"></div>
-</section>
-<section id="reported">
-  <h2>Publicados con denuncias <span class="count"></span></h2>
-  <p class="hint">Siguen en el catálogo: se retiran solos con 3 denuncias de cuentas con al menos 7 días.</p>
-  <div class="list"></div>
-</section>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <symbol id="i-mark" viewBox="27 21 54 59">
+    <path class="page" d="M53,50C47,45.5 39.5,44.2 31,45.2L31,72.4C39.5,71.6 47,73 53,77Z"/>
+    <path class="page" opacity=".86" d="M55,50C61,45.5 68.5,44.2 77,45.2L77,72.4C68.5,71.6 61,73 55,77Z"/>
+    <path class="wave" d="M46.5,40.5Q54,34.5 61.5,40.5"/>
+    <path class="wave" opacity=".7" d="M41,33.5Q54,24 67,33.5"/>
+  </symbol>
+  <symbol id="i-refresh" viewBox="0 0 24 24"><path d="M20 11a8 8 0 1 0-2.3 5.7M20 5v6h-6"/></symbol>
+  <symbol id="i-logout" viewBox="0 0 24 24"><path d="M15 4h3a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2h-3M10 17l-5-5 5-5M5 12h11"/></symbol>
+  <symbol id="i-file" viewBox="0 0 24 24"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8zM14 3v5h5M9 13h6M9 17h4"/></symbol>
+  <symbol id="i-check" viewBox="0 0 24 24"><path d="M5 12.5l4.5 4.5L19 7.5"/></symbol>
+  <symbol id="i-x" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></symbol>
+  <symbol id="i-flag" viewBox="0 0 24 24"><path d="M5 21V4M5 4h11l-2 4 2 4H5"/></symbol>
+  <symbol id="i-eye" viewBox="0 0 24 24"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></symbol>
+  <symbol id="i-eye-off" viewBox="0 0 24 24"><path d="M3 3l18 18M10.6 5.1A9.7 9.7 0 0 1 12 5c6.5 0 10 7 10 7a17 17 0 0 1-3.2 4.1M6.6 6.6A17 17 0 0 0 2 12s3.5 7 10 7a9.6 9.6 0 0 0 4.4-1.1M9.9 9.9a3 3 0 0 0 4.2 4.2"/></symbol>
+  <symbol id="i-lock" viewBox="0 0 24 24"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></symbol>
+</svg>
+
+<main id="login" class="login" hidden>
+  <form id="login-form" class="login-card" novalidate>
+    <svg class="mark mark-lg" aria-hidden="true"><use href="#i-mark"/></svg>
+    <h1>Narra</h1>
+    <p class="login-sub">Panel de revisión del catálogo</p>
+    <input class="visually-hidden" type="text" name="username" autocomplete="username" value="narra" tabindex="-1" aria-hidden="true">
+    <label for="password">Contraseña</label>
+    <div class="field">
+      <svg class="i field-icon" aria-hidden="true"><use href="#i-lock"/></svg>
+      <input id="password" name="password" type="password" autocomplete="current-password" required spellcheck="false">
+      <button id="reveal" class="icon-button" type="button" aria-label="Mostrar contraseña" aria-pressed="false"><svg class="i" aria-hidden="true"><use href="#i-eye"/></svg></button>
+    </div>
+    <p id="login-error" class="login-error" role="alert"></p>
+    <button id="login-submit" class="button primary wide" type="submit">Entrar</button>
+    <p class="fine">La sesión dura 12 horas en este navegador.</p>
+  </form>
+</main>
+
+<div id="app" hidden>
+  <header class="topbar">
+    <div class="brand">
+      <svg class="mark" aria-hidden="true"><use href="#i-mark"/></svg>
+      <span class="brand-name">Narra</span>
+      <span class="brand-sub">Revisión</span>
+    </div>
+    <div class="top-actions">
+      <button id="refresh" class="button ghost" type="button"><svg class="i" aria-hidden="true"><use href="#i-refresh"/></svg><span class="label">Actualizar</span></button>
+      <button id="logout" class="button ghost" type="button"><svg class="i" aria-hidden="true"><use href="#i-logout"/></svg><span class="label">Salir</span></button>
+    </div>
+  </header>
+
+  <main class="content">
+    <div class="stats">
+      <a class="stat" href="#pending"><span id="stat-pending" class="stat-n">–</span><span class="stat-l">pendientes de revisión</span></a>
+      <a class="stat" href="#reported"><span id="stat-reported" class="stat-n">–</span><span class="stat-l">publicados con denuncias</span></a>
+    </div>
+
+    <section id="pending" aria-labelledby="pending-title">
+      <h2 id="pending-title">Pendientes</h2>
+      <p class="hint">Abre el PDF y revisa todas las páginas y el texto antes de aprobar. Al aprobar se vuelve a pasar el antivirus y el libro aparece en el catálogo.</p>
+      <div class="list"></div>
+    </section>
+
+    <section id="reported" aria-labelledby="reported-title">
+      <h2 id="reported-title">Publicados con denuncias</h2>
+      <p class="hint">Siguen en el catálogo. Se retiran solos con 3 denuncias de cuentas con al menos 7 días.</p>
+      <div class="list"></div>
+    </section>
+  </main>
+</div>
+
+<dialog id="confirm" aria-labelledby="confirm-title">
+  <form method="dialog">
+    <h2 id="confirm-title">¿Rechazar este libro?</h2>
+    <p id="confirm-text"></p>
+    <div class="dialog-actions">
+      <button class="button ghost" value="cancel">Cancelar</button>
+      <button class="button danger-solid" value="ok">Rechazar</button>
+    </div>
+  </form>
+</dialog>
+
+<div id="toast" class="toast" role="status" aria-live="polite" hidden></div>
 </body>
 </html>

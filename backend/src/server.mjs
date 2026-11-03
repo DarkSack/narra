@@ -8,7 +8,7 @@ import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { Readable, Transform } from 'node:stream';
 import { pipeline } from 'node:stream/promises';
-import { randomUUID, createHash, timingSafeEqual } from 'node:crypto';
+import { randomUUID, createHash, createHmac, timingSafeEqual } from 'node:crypto';
 import { platform, unwrap, patchBook, removeObject, sha256, notifyReview, PUBLIC_COLUMNS } from './platform.mjs';
 import { metadata, validateUploadHeaders, PdfStream, PolicyError, MAX_BYTES } from './policy.mjs';
 import { reviewQueue, decide } from './review.mjs';
@@ -33,19 +33,32 @@ export function watchRate(bytes, abort) {
 const blockToken = (userId, blockedId) => createHash('sha256').update(`${userId}:${blockedId}`).digest('hex').slice(0,32);
 
 const digest = text => createHash('sha256').update(text).digest();
-/** Panel de revisión: contraseña ADMIN_PASSWORD por HTTP Basic (el usuario da igual). Sin ella, no existe. */
+const same = (a, b) => timingSafeEqual(digest(a), digest(b));
+const SESSION_TIME = 12 * 3600_000;
+// La llave sale de la contraseña: cambiar ADMIN_PASSWORD cierra todas las sesiones abiertas.
+const sign = expires => createHmac('sha256', `narra-admin:${process.env.ADMIN_PASSWORD}`).update(String(expires)).digest('base64url');
+/** Panel de revisión: entra con ADMIN_PASSWORD y recibe una cookie de sesión firmada. Sin la variable, no existe. */
 function adminPanel(client) {
   const admin = express.Router();
-  admin.use(rateLimit({ windowMs: 15*60_000, limit: 10, skipSuccessfulRequests: true }), (req, res, next) => {
+  admin.use((req, res, next) => {
     if (!process.env.ADMIN_PASSWORD) return res.sendStatus(404);
-    const basic = /^Basic ([A-Za-z0-9+/=]+)$/.exec(req.headers.authorization ?? '')?.[1];
-    const password = basic ? Buffer.from(basic,'base64').toString().replace(/^[^:]*:/,'') : '';
-    if (!timingSafeEqual(digest(password), digest(process.env.ADMIN_PASSWORD))) return res.set('WWW-Authenticate','Basic realm="Narra", charset="UTF-8"').sendStatus(401);
-    // El navegador manda la contraseña sola: un formulario de otro sitio no puede poner esta cabecera.
+    // Además de SameSite=Strict: un formulario de otro sitio no puede poner esta cabecera.
     if (req.method !== 'GET' && req.get('X-Narra-Admin') !== '1') return res.sendStatus(403);
     next();
   });
   admin.use(express.static(join(dirname(fileURLToPath(import.meta.url)),'admin')));
+  admin.post('/login', rateLimit({ windowMs: 15*60_000, limit: 10, skipSuccessfulRequests: true, message: { message: 'Demasiados intentos. Espera 15 minutos.' } }), express.json({ limit: '1kb' }), (req, res) => {
+    if (!same(String(req.body?.password ?? ''), process.env.ADMIN_PASSWORD)) return res.status(401).json({ message: 'Contraseña incorrecta' });
+    const expires = Date.now() + SESSION_TIME;
+    res.cookie('narra_admin', `${expires}.${sign(expires)}`, { httpOnly: true, secure: true, sameSite: 'strict', path: '/admin', maxAge: SESSION_TIME });
+    res.sendStatus(204);
+  });
+  admin.post('/logout', (_req, res) => { res.clearCookie('narra_admin', { httpOnly: true, secure: true, sameSite: 'strict', path: '/admin' }); res.sendStatus(204); });
+  admin.use((req, res, next) => {
+    const [, expires, mac] = /(?:^|;\s*)narra_admin=(\d+)\.([\w-]+)/.exec(req.headers.cookie ?? '') ?? [];
+    if (!(Number(expires) > Date.now()) || !same(mac, sign(expires))) return res.status(401).json({ message: 'Tu sesión terminó. Vuelve a entrar.' });
+    next();
+  });
   admin.get('/queue', async (_req, res) => res.json(await reviewQueue(client)));
   admin.get('/books/:id/pdf', async (req, res) => {
     if (!/^[a-f0-9-]{36}$/i.test(req.params.id)) return res.sendStatus(404);

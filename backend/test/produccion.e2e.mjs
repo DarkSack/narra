@@ -1,6 +1,6 @@
 // Prueba de humo contra el catálogo desplegado (ver backend/README.md): usuario confirmado de usar y
 // tirar, subida real, ClamAV + reconstrucción + moderación reales, aprobación por el panel /admin
-// (ADMIN_PASSWORD), descarga íntegra y,
+// (entra con ADMIN_PASSWORD), descarga íntegra y,
 // al final, DELETE /me, que borra el libro, sus archivos y el usuario.
 import assert from 'node:assert/strict';
 import { createHash, randomBytes } from 'node:crypto';
@@ -48,7 +48,11 @@ try {
     if (!['uploading','queued','processing'].includes(book?.status)) break;
   }
   assert.equal(book?.status, 'review', book?.reason);
-  const admin = { Authorization:`Basic ${Buffer.from(`narra:${process.env.ADMIN_PASSWORD}`).toString('base64')}`, 'X-Narra-Admin':'1' };
+  const entered = await fetch(`${API}/admin/login`, {
+    method:'POST', headers:{ 'Content-Type':'application/json', 'X-Narra-Admin':'1' }, body: JSON.stringify({ password: process.env.ADMIN_PASSWORD }),
+  });
+  assert.equal(entered.status, 204, 'no se pudo entrar al panel');
+  const admin = { Cookie: entered.headers.get('set-cookie').split(';')[0], 'X-Narra-Admin':'1' };
   assert.ok((await read(await fetch(`${API}/admin/queue`, { headers:admin }))).pending?.some(row => row.id === book.id), 'el libro no sale en el panel');
   const approved = await fetch(`${API}/admin/books/${book.id}/approve`, { method:'POST', headers:admin });
   assert.equal(approved.status, 204, JSON.stringify(await read(approved)));

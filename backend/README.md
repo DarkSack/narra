@@ -60,11 +60,13 @@ conserva desactivadas las subidas.
 El worker deja los libros en `review`, nunca `published`. Un operador abre la copia revisada,
 revisa **todas** las páginas y su texto, comprueba derechos y contenido, y aprueba o rechaza.
 
-**Panel web:** `https://narra.sackito.online/admin/`, con la contraseña `ADMIN_PASSWORD` del `.env`
-(HTTP Basic; el usuario da igual). Sin esa variable el panel no existe (404). Muestra pendientes y
-publicados con denuncias, abre el PDF y pide marcar «Revisé todas las páginas» antes de aprobar.
-Los POST exigen la cabecera `X-Narra-Admin` (contra CSRF) y la API admite 10 contraseñas malas
-cada 15 minutos por IP. Para cambiarla, edita el `.env` y ejecuta `docker compose up -d api`.
+**Panel web:** `https://narra.sackito.online/admin/`, con la contraseña `ADMIN_PASSWORD` del `.env`.
+Sin esa variable el panel no existe (404). Al entrar, la API da una cookie de sesión de 12 horas
+(`HttpOnly`, `Secure`, `SameSite=Strict`, firmada con HMAC a partir de la contraseña: cambiarla
+cierra todas las sesiones). Muestra pendientes y publicados con denuncias, abre el PDF y pide
+marcar «Revisé todas las páginas» antes de aprobar. Los POST exigen la cabecera `X-Narra-Admin`
+(contra CSRF) y el login admite 10 contraseñas malas cada 15 minutos por IP. Para cambiar la
+contraseña, edita el `.env` y ejecuta `docker compose up -d api`.
 
 **Desde la terminal**, en el entorno privado del worker:
 
