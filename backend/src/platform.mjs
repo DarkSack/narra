@@ -26,7 +26,27 @@ export async function sha256(blob) {
   for await (const chunk of blob.stream()) hash.update(chunk);
   return hash.digest('hex');
 }
-export const PUBLIC_COLUMNS = 'id,title,author,description,status,reason,original_bytes,pdf_bytes,sha256,pages,created_at';
+const escapeHtml = text => String(text).replace(/[&<>"']/g, c => `&#${c.charCodeAt(0)};`);
+/** Avisa al operador (REVIEW_EMAIL) de que un libro espera revisión. Nunca hace fallar al que llama. */
+export async function notifyReview(book, why) {
+  const { RESEND_API_KEY, EMAIL_FROM, REVIEW_EMAIL } = process.env;
+  if (!RESEND_API_KEY || !EMAIL_FROM || !REVIEW_EMAIL) return;
+  // Resend y no InsForge: el plan gratis de InsForge rechaza los correos propios (403).
+  // Si falla el correo, el libro sigue en `review` y aparece en `npm run review -- list`.
+  // Nunca lanza: en el worker, un error aquí llevaría al catch que borra la copia revisada.
+  try {
+    const response = await fetch('https://api.resend.com/emails', {
+      method: 'POST', signal: AbortSignal.timeout(10_000),
+      headers: { Authorization: `Bearer ${RESEND_API_KEY}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        from: EMAIL_FROM, to: REVIEW_EMAIL, subject: 'Narra: un libro espera revisión',
+        html: `<p>«${escapeHtml(book.title)}»: ${escapeHtml(why)}.</p><p><code>npm run review -- list</code><br>${escapeHtml(book.id)}</p>`,
+      }),
+    });
+    if (!response.ok) throw new Error(`HTTP ${response.status}`);
+  } catch (error) { console.error('catalog_notice_failed', book.id, error.message); }
+}
+export const PUBLIC_COLUMNS ='id,title,author,description,status,reason,original_bytes,pdf_bytes,sha256,pages,created_at';
 export async function patchBook(client, id, values, expectedStatus) {
   let query = client.database.from('catalog_books').update(values).eq('id', id);
   if (expectedStatus) query = query.eq('status', expectedStatus);

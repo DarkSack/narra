@@ -39,10 +39,11 @@ Primera versión en Google Play.
 
 ## 2. Ficha de Play Store (español de Latinoamérica, es-419)
 
-Actualizada el 30 de octubre de 2026. Los textos preparados para la próxima versión están en
+Actualizada el 3 de noviembre de 2026. Los textos de la 3.3.0 están en
 [`play/listing/es-419`](../play/listing/es-419). Usar esos archivos para copiar a Play Console.
-La cuenta y el catálogo se identifican como **en preparación**: no anunciar subidas, descargas
-ni publicación disponibles hasta conectar el VPS y distribuir la versión que las habilite.
+El catálogo funciona desde la 3.3.0: la API está en `https://narra.sackito.online` y
+`gradle.properties` fija `narra.catalogUrl`. Si se vacía esa propiedad, la app vuelve a ocultar
+el catálogo y estos textos (y la sección 5) dejan de valer.
 
 Las notas de 3.1.0 arriba se conservan como historial; las nuevas están en
 [`release-notes.txt`](../play/listing/es-419/release-notes.txt).
@@ -81,7 +82,7 @@ del catálogo. El siguiente texto se conserva como referencia de las funciones l
 >
 > PRIVACIDAD
 > • El audio se crea y se queda en tu teléfono. Compartir un PDF en el catálogo es opcional.
-> • Biblioteca personal sin cuenta y sin anuncios. El catálogo compartido está en preparación.
+> • Biblioteca personal sin cuenta y sin anuncios; la cuenta solo hace falta para el catálogo.
 
 **Categoría:** Libros y obras de consulta. **Etiquetas:** audiolibros, lector de PDF, texto a voz.
 **Correo de contacto:** donsackito@protonmail.com, el mismo de la política de privacidad (si lo cambias, cámbialo en las dos).
@@ -114,7 +115,7 @@ subir este bundle a un canal de prueba y crear el producto único **`narra_plus`
 |---|---|
 | Política de privacidad | https://shop.sackito.online/privacidad/narra (copia de [PRIVACIDAD.md](PRIVACIDAD.md) en `lib/privacidad-apps.ts` de rpgroll-shop: si cambia una, cambiar la otra) |
 | Anuncios | No contiene anuncios |
-| Acceso a la app | Biblioteca personal sin cuenta. Antes de enviar una versión con cuentas, declarar el acceso restringido del catálogo y proporcionar a revisión una cuenta de prueba válida, sin publicarla en la ficha |
+| Acceso a la app | «Algunas funciones están restringidas»: el Catálogo pide iniciar sesión. **Tú**: crea una cuenta de prueba con correo verificado y da a Play su correo y contraseña (pestaña Catálogo → Iniciar sesión). No la publiques en la ficha |
 | Clasificación de contenido | Revisar el cuestionario IARC para la versión que se distribuye. Plus implica compras digitales; el catálogo añade contenido de usuarios. No reutilizar automáticamente las respuestas de la versión solo local |
 | Público objetivo | 13 años o más. «¿Puede atraer a niños?»: No |
 | Funciones financieras | «Mi app no ofrece funciones financieras» (vender Plus con Google Play no cuenta) |
@@ -124,16 +125,17 @@ subir este bundle a un canal de prueba y crear el producto único **`narra_plus`
 
 ## 5. Seguridad de los datos
 
-Narra incorpora cuentas y un catálogo opcional de PDF. La declaración anterior, que decía que
-no tenía servidor, debe sustituirse antes de publicar esta versión. También hay que contar lo
-que envían las bibliotecas. ML Kit manda a Google diagnósticos al reconocer texto
+Desde la 3.3.0 hay cuentas y un catálogo opcional de PDF, así que la declaración de la 3.1.0
+(«sin servidor») se sustituye por esta. También cuenta lo que envían las bibliotecas: ML Kit manda
+a Google diagnósticos al reconocer texto
 ([lo que declara Google](https://developers.google.com/ml-kit/android-data-disclosure)).
 
 | Pregunta | Respuesta |
 |---|---|
 | ¿Recopila o comparte alguno de los tipos de datos? | **Sí** |
-| ¿Todos los datos se cifran en tránsito? | La app usa HTTPS; verificar también la configuración del servidor desplegado |
-| ¿Ofreces una forma de pedir que se borren los datos? | Sí: eliminación dentro de la app y solicitud por correo; configurar también la URL externa requerida por Play |
+| ¿Todos los datos se cifran en tránsito? | **Sí**: la app solo habla por HTTPS (InsForge y `narra.sackito.online`, con certificado de Caddy) |
+| ¿Ofreces una forma de pedir que se borren los datos? | **Sí**: Ajustes → Tu cuenta → Eliminar cuenta, o por correo |
+| URL para pedir que se borre la cuenta | https://shop.sackito.online/privacidad/narra (sección «Borrar tus datos») |
 
 Tipos de datos que se marcan:
 
@@ -141,8 +143,15 @@ Tipos de datos que se marcan:
 |---|---|---|---|---|---|
 | Información y rendimiento de la app → Diagnóstico | Sí | No | No | Obligatorio | Estadísticas |
 | Dispositivo u otros identificadores → ID del dispositivo u otros IDs | Sí | No | No | Obligatorio | Estadísticas |
-| Información personal → correo e identificador de usuario | Sí | Revisar tratamiento de proveedores | No | Opcional (cuenta) | Gestión de cuentas y seguridad |
-| Archivos y documentos → PDF, texto y metadatos compartidos | Sí | Revisar excepciones para proveedores y publicación solicitada | No | Opcional (compartir) | Funcionalidad y moderación |
+| Información personal → Dirección de correo electrónico | Sí | No | No | Opcional (cuenta) | Funcionalidad de la app; Gestión de la cuenta |
+| Información personal → IDs de usuario | Sí | No | No | Opcional (cuenta) | Funcionalidad de la app; Gestión de la cuenta; Prevención de fraudes, seguridad y cumplimiento |
+| Archivos y documentos → Archivos y documentos (PDF compartidos, título, autor y descripción) | Sí | No | No | Opcional (compartir) | Funcionalidad de la app; Prevención de fraudes, seguridad y cumplimiento |
+| Actividad en la app → Otro contenido generado por el usuario (motivo de una denuncia) | Sí | No | No | Opcional | Prevención de fraudes, seguridad y cumplimiento |
+
+«Compartido: No» en todas porque InsForge, OpenRouter/Gemini (moderación) y Resend (aviso al
+operador con el título) tratan los datos por encargo de Narra, y Play no cuenta como compartir lo
+que va a proveedores de servicios; publicar un libro aprobado lo pide la persona al pulsar
+«Enviar a revisión», que es la otra excepción de Play.
 
 Lo que **no** se marca, y por qué:
 
@@ -159,13 +168,12 @@ Lo que **no** se marca, y por qué:
 Si cambias de versión de ML Kit o agregas una biblioteca con red, revisa este formulario antes de
 subir la versión.
 
-Antes de activar el catálogo en Play, revisar la [declaración de datos](https://support.google.com/googleplay/android-developer/answer/10787469)
-según los contratos reales de InsForge/OpenRouter/proveedor del modelo. La tabla anterior es una
-guía de implementación, no sustituye el formulario ni verifica por sí misma cumplimiento.
-La app incorpora denuncia de contenido, bloqueo/desbloqueo del publicador, consentimiento antes
-de compartir y eliminación de cuenta; revisar también la [política UGC](https://support.google.com/googleplay/android-developer/answer/9876937).
-Publicar la política actualizada y una página externa para solicitar eliminación, completar la
-clasificación de contenido y probar el servicio completo antes de subir una nueva versión.
+Las respuestas siguen la [guía de Play](https://support.google.com/googleplay/android-developer/answer/10787469);
+quien llena el formulario es responsable de que sean ciertas. Para la
+[política de contenido generado por usuarios](https://support.google.com/googleplay/android-developer/answer/9876937)
+la app ya tiene denuncia, bloqueo del publicador, consentimiento de derechos antes de compartir,
+moderación previa y eliminación de cuenta. En el cuestionario de clasificación (IARC), marcar que
+los usuarios pueden compartir contenido entre sí.
 
 ## 6. Servicios en primer plano
 

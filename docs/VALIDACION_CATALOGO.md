@@ -21,19 +21,28 @@ Fecha de trabajo: 30 de octubre de 2026. El despliegue en el VPS fue aplazado po
 - `npm audit` y `pip-audit` sin vulnerabilidades conocidas con las versiones corregidas.
   Se fijaron Zod 4.6.7, Pillow 13.0.0 y pip 26.2.2. Se notificó a InsForge la dependencia
   transitiva vulnerable de su SDK mediante su CLI (reporte 0acef1d2-1455-405e-96b8-d6e4db9f833d).
-- Configuración de Caddy y composición de producción validadas sin iniciar un sitio público.
+- Configuración de Caddy y composición de producción validadas sin iniciar un sitio público (el 3 de noviembre se cambió por el Caddy del sistema del VPS).
 - Descripción breve de Play: 71/80 caracteres; completa: 2.306/4.000; notas: 358/500.
 - Ficha es-419 guardada como borrador en Play Console, con confirmación visible y captura.
 
 APK local: `dist/catalogo/Narra-catalogo-pruebas.apk` (interna/debug, no subir a Play).
 SHA-256: `6A3400F1F0B2EE76E478B980EB43AF18EE96E87D2D5AEB9B55FEE9DEF4F8B832`.
 
-## Pendientes intencionales
+## Producción (3 de noviembre de 2026)
 
-Conectar VPS, dominio, HTTPS y secretos; probar registro/verificación/recuperación con un usuario
-de prueba autorizado; probar carga, descarga, retirada, denuncias, bloqueo y borrado de cuenta
-contra la API desplegada; activar `narra.catalogUrl`; actualizar la política pública y los
-formularios de Play para la versión distribuida. El borrador de ficha no se envió a revisión.
+- API, worker, reconstructor y ClamAV en el VPS (`/opt/narra-catalog`), la API solo en
+  `127.0.0.1:8080` detrás del Caddy del sistema (`narra.sackito.online`); ver backend/README.md.
+- `backend/test/produccion.e2e.mjs` pasó contra producción: cuenta de usar y tirar, subida, ClamAV,
+  reconstrucción y moderación reales, libro en `review`, aprobación, listado sin `owner_id`,
+  denuncia del propio libro rechazada (422), descarga con SHA-256 correcto y borrado de la cuenta.
+- El aviso al operador sale por Resend (el plan gratis de InsForge rechaza correos propios con 403);
+  Resend aceptó el correo de prueba.
+
+## Pendientes
+
+Registro del DNS `narra` → VPS (y con él el certificado de Caddy); probar en un teléfono la
+verificación de correo, recuperación de contraseña, retirada, bloqueo y borrado de cuenta con la
+app; formularios de Play para la 3.3.0 (docs/PLAY_STORE.md, secciones 4 y 5).
 
 No se hizo una auditoría externa ni un pentest. Las pruebas no garantizan ausencia total de
 amenazas, evasiones de moderación ni errores de OCR. La aprobación humana sigue siendo obligatoria.

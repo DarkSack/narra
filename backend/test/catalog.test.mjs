@@ -108,3 +108,25 @@ test('una transferencia que gotea se corta tras un minuto; una lenta pero consta
   t.mock.timers.tick(10_000); assert.ok(cut>=1);
   stopSlow(); stopSteady();
 });
+
+test('aviso de revisión: escapa el título y nunca hace fallar al que llama',async()=> {
+  const {notifyReview}=await import('../src/platform.mjs');
+  const sent=[]; let reply=async()=>new Response('{}',{status:200});
+  globalThis.fetch=async(url,options)=>{ sent.push(JSON.parse(options.body)); return reply(); };
+  Object.assign(process.env,{RESEND_API_KEY:'re_prueba',EMAIL_FROM:'Narra <narra@example.com>',REVIEW_EMAIL:'operador@example.com'});
+  try {
+    await notifyReview({id,title:'<img src=x onerror=alert(1)>'},'pasó las comprobaciones automáticas');
+    assert.equal(sent[0].to,'operador@example.com');
+    assert.doesNotMatch(sent[0].html,/<img/);
+    reply=async()=>{ throw new Error('sin red'); };
+    await notifyReview({id,title:'x'},'y');
+    reply=async()=>new Response('{}',{status:403});
+    await notifyReview({id,title:'x'},'y');
+    delete process.env.RESEND_API_KEY;
+    await notifyReview({id,title:'sin aviso'},'z');
+    assert.equal(sent.length,3);
+  } finally {
+    globalThis.fetch=originalFetch;
+    for (const key of ['RESEND_API_KEY','EMAIL_FROM','REVIEW_EMAIL']) delete process.env[key];
+  }
+});

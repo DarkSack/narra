@@ -23,12 +23,9 @@ flujo habitual de revisión y creación del audiolibro local. En **Ajustes → T
 sesión, recuperar la contraseña y eliminar tu cuenta y sus publicaciones.
 
 El proyecto InsForge **Narra** está configurado con tablas protegidas y buckets privados. La API,
-el worker, ClamAV y el reconstructor están en [`backend`](backend/README.md). Las subidas y descargas
-permanecen desactivadas hasta compilar con la URL HTTPS del servicio validado:
-
-```powershell
-.\gradlew.bat :app:assembleInternaDebug -Pnarra.catalogUrl=https://tu-servicio
-```
+el worker, ClamAV y el reconstructor están en [`backend`](backend/README.md) y funcionan en
+`https://narra.sackito.online`, la URL que fija `narra.catalogUrl` en `gradle.properties`. Con esa
+propiedad vacía (`-Pnarra.catalogUrl=`) la app oculta el catálogo y la cuenta.
 
 Solo se admiten PDF de hasta 100 MB (500 páginas para compartir; 1.500 para uso local). El original
 se mantiene en cuarentena privada; solo se distribuye una copia reconstruida con OCR, analizada

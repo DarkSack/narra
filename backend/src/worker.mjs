@@ -4,7 +4,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { Readable,Transform } from 'node:stream';
 import { pipeline } from 'node:stream/promises';
-import { platform,unwrap,patchBook,removeObject,sha256 } from './platform.mjs';
+import { platform,unwrap,patchBook,removeObject,sha256,notifyReview } from './platform.mjs';
 import { PolicyError,MAX_BYTES,MAX_PAGES } from './policy.mjs';
 import { scan } from './antivirus.mjs';
 import { extractBundle } from './bundle.mjs';
@@ -66,6 +66,7 @@ export async function processBook(client,book) {
       sha256:await sha256(safe),pages:manifest.pages,
     },'processing');
     if (!updated.length) await removeObject(client,'books',safeKey);
+    else await notifyReview(book,'pasó las comprobaciones automáticas');
   } catch(error) {
     console.error('catalog_check_failed',book.id,error.name);
     await removeObject(client,'books',safeKey).catch(()=>{});

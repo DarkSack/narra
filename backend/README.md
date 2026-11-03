@@ -23,17 +23,35 @@ compartidos; el rate limiter actual vive en memoria de una única instancia de A
 la petición a 100 MiB; la API corta una transferencia por debajo de 64 KiB/s tras el primer minuto
 (con tope de 30 min), así una conexión lenta de verdad termina y una que gotea no retiene su hueco.
 
-Para el VPS, una vez elegido el dominio y apuntado su DNS, añade `NARRA_DOMAIN` al `.env` privado.
-`compose.production.yaml` incorpora Caddy para HTTPS automático. Después de revisar puertos,
-firewall y que el acceso SSH se conserva, el comando preparado es:
+Producción (desde el 2026-11-03): el VPS de Sack en `/opt/narra-catalog` (copia de este
+directorio sin `node_modules`, con su `.env` en modo 600) y `docker compose up -d --build`. La API
+solo escucha en `127.0.0.1:8080`; el Caddy del sistema la publica en `https://narra.sackito.online`
+con este bloque de `/etc/caddy/Caddyfile`:
 
-```sh
-docker compose -f compose.yaml -f compose.production.yaml up -d --build
+```
+narra.sackito.online {
+	reverse_proxy 127.0.0.1:8080
+	request_body {
+		max_size 100MiB
+	}
+	header -Server
+}
 ```
 
-Solo deben ser públicos SSH, 80 y 443. Los puertos de renderer y ClamAV quedan en redes internas;
-la API se publica mediante Caddy. No pongas claves en argumentos de shell ni publiques `.env`.
-No ejecutes el comando de producción hasta disponer del VPS y dominio correctos.
+Para actualizar, vuelve a copiar el directorio y ejecuta `docker compose up -d --build api worker`.
+Prueba de humo contra producción (crea una cuenta de usar y tirar, sube, aprueba, descarga y
+borra todo; necesita la red de la API y la de ClamAV, que usa la aprobación):
+
+```sh
+docker create --name narra-e2e --env-file .env -e CLAMD_HOST=clamav --network narra-catalog_edge \
+  -v /opt/narra-catalog/test/produccion.e2e.mjs:/app/test/produccion.e2e.mjs:ro \
+  narra-catalog-worker node test/produccion.e2e.mjs
+docker network connect narra-catalog_scan narra-e2e
+docker start -a narra-e2e; docker rm narra-e2e
+```
+
+Solo deben ser públicos SSH, 80 y 443. Los puertos de renderer y ClamAV quedan en redes internas.
+No pongas claves en argumentos de shell ni publiques `.env`.
 
 Para infraestructura en InsForge, usa su CLI `compute` y sus reglas de redes privadas y secretos.
 Si el alojamiento no permite mantener el renderer sin salida a Internet y aislado del API,
@@ -50,6 +68,11 @@ npm run review -- list
 npm run review -- approve UUID --reviewed
 npm run review -- reject UUID --reviewed
 ```
+
+En el VPS: `docker compose exec worker node src/review.mjs list` (y `approve`/`reject` igual).
+Con `RESEND_API_KEY`, `EMAIL_FROM` y `REVIEW_EMAIL` llega un correo cada vez que un libro entra
+en `review`; si el correo falla, el log del worker dice `catalog_notice_failed` y el libro espera
+igual en `list`.
 
 La aprobación comprueba hash y tamaño y vuelve a pasar antivirus. Tres denunciantes distintos
 con cuentas de al menos 7 días, desde la última aprobación, pasan el libro publicado a `review`

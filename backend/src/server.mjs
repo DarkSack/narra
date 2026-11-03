@@ -8,7 +8,7 @@ import { join } from 'node:path';
 import { Readable, Transform } from 'node:stream';
 import { pipeline } from 'node:stream/promises';
 import { randomUUID, createHash } from 'node:crypto';
-import { platform, unwrap, patchBook, removeObject, sha256, PUBLIC_COLUMNS } from './platform.mjs';
+import { platform, unwrap, patchBook, removeObject, sha256, notifyReview, PUBLIC_COLUMNS } from './platform.mjs';
 import { metadata, validateUploadHeaders, PdfStream, PolicyError, MAX_BYTES } from './policy.mjs';
 
 const MAX_TRANSFERS = 3;
@@ -127,7 +127,7 @@ export function createApp(client = platform()) {
   app.post('/books/:id/report', express.json({limit:'8kb'}), async (req,res) => {
     const reason = req.body?.reason;
     if (typeof reason !== 'string' || reason.trim().length < 3 || reason.length > 1000) throw new PolicyError('Describe el motivo de la denuncia');
-    const [book] = unwrap(await client.database.from('catalog_books').select('id,owner_id,reviewed_at').eq('id',req.params.id).eq('status','published').limit(1));
+    const [book] = unwrap(await client.database.from('catalog_books').select('id,title,owner_id,reviewed_at').eq('id',req.params.id).eq('status','published').limit(1));
     if (!book) return res.sendStatus(404);
     if (book.owner_id===req.userId) throw new PolicyError('Para quitar tu libro, retíralo desde Mis publicaciones');
     const reports = () => client.database.from('catalog_reports');
@@ -138,7 +138,9 @@ export function createApp(client = platform()) {
     unwrap(await reports().insert([{book_id:book.id,reporter_id:req.userId,reason:reason.trim(),trusted}]));
     // Una sola cuenta no retira un libro: hacen falta varias cuentas con antigüedad desde su última aprobación.
     const recent = unwrap(await reports().select('id').eq('book_id',book.id).eq('trusted',true).gt('created_at',book.reviewed_at).limit(REPORTS_TO_HIDE));
-    if (recent.length>=REPORTS_TO_HIDE) await patchBook(client,book.id,{status:'review',reason:'Pendiente de revisar varias denuncias',reviewed_at:null},'published');
+    if (recent.length>=REPORTS_TO_HIDE && (await patchBook(client,book.id,{status:'review',reason:'Pendiente de revisar varias denuncias',reviewed_at:null},'published')).length) {
+      await notifyReview(book,'se retiró por varias denuncias');
+    }
     res.sendStatus(204);
   });
   app.post('/books/:id/block', async (req,res) => {
@@ -190,7 +192,7 @@ export function createApp(client = platform()) {
   });
   app.use((error,_req,res,_next)=> {
     const code = randomUUID();
-    console.error('catalog_request_failed',code,error.name); // Sin tokens, libros ni credenciales.
+    console.error('catalog_request_failed',code,error.status ?? 503,error.name); // Sin tokens, libros ni credenciales.
     if (!res.headersSent) res.status(error.status ?? 503).json({message:error instanceof PolicyError ? error.message : 'No se pudo completar la operación. Intenta más tarde.', reference:code});
   });
   return app;

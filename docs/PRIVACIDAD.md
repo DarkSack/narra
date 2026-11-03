@@ -1,6 +1,6 @@
 # Política de privacidad de Narra
 
-Última actualización: 30 de octubre de 2026.
+Última actualización: 3 de noviembre de 2026.
 
 Narra convierte tus PDF en audiolibros en tu teléfono. Esta política explica qué pasa con tus libros
 y con la poca información que sale del teléfono.
@@ -23,11 +23,12 @@ o permiso para distribuirlo. El original pasa por antivirus y reconstrucción en
 aislado. Todas las páginas renderizadas, texto reconocido, título y autor se envían a OpenRouter
 y al proveedor de moderación (por defecto Google Gemini) para detectar material sexual explícito
 u obsceno. No compartas documentos confidenciales o datos personales. El OCR y la moderación
-pueden equivocarse. Un operador revisa el resultado antes de publicarlo; ningún análisis garantiza
-ausencia absoluta de riesgos.
+pueden equivocarse. Un operador revisa el resultado antes de publicarlo (le llega un aviso por
+correo, enviado con Resend, con el título del libro); ningún análisis garantiza ausencia absoluta
+de riesgos.
 
 Otros usuarios registrados pueden descargar la copia reconstruida aprobada y crear su propio
-audio local. Nunca se distribuye el archivo original. Varias denuncias de personas distintas
+audio local. Nunca se distribuye el archivo original. Varias denuncias de cuentas distintas
 retiran temporalmente un libro del catálogo para revisión.
 
 Los originales y temporales de texto e imágenes se eliminan al terminar o fallar el procesamiento.
@@ -50,7 +51,6 @@ desactivado para Narra, así que nada de esto se copia a la nube.
 - **Cuenta y catálogo.** Tu correo y los datos necesarios para autenticarte se envían a InsForge.
   Solo los PDF que decidas compartir se suben y revisan por los proveedores descritos arriba.
   Las conexiones de la app a esos servicios usan HTTPS.
-
 - **Diagnóstico de ML Kit.** Cuando Narra reconoce el texto de un PDF escaneado, ML Kit (de Google)
   envía a Google información técnica: modelo y versión de Android del teléfono, versión de la app,
   un identificador por instalación que no identifica a la persona, tiempos de respuesta y códigos de
@@ -77,8 +77,8 @@ esos archivos son tuyos y quedan fuera de Narra.
 - **Notificaciones**: progreso de la creación del audio y controles del reproductor.
 - **Servicios en primer plano**: seguir escuchando con la pantalla apagada y crear el audio aunque
   cierres la app.
-- **Internet y estado de la red**: los usan las compras, las actualizaciones de Google Play y ML Kit,
-  y sirven para saber si hay Wi-Fi antes de usar una voz en línea.
+- **Internet y estado de la red**: los usan la cuenta y el catálogo, las compras, las actualizaciones
+  de Google Play y ML Kit, y sirven para saber si hay Wi-Fi antes de usar una voz en línea.
 
 ## Borrar tus datos
 

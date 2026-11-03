@@ -15,9 +15,8 @@ ESCUCHA A TU RITMO
 EL AUDIO SE QUEDA CONTIGO
 La conversión y los archivos de audio se guardan en tu teléfono. Con las voces descargadas puedes crear y escuchar audiolibros sin conexión. Las voces marcadas «en línea» pueden necesitar Internet y enviar el texto al proveedor del motor de voz.
 
-CUENTA Y CATÁLOGO: EN PREPARACIÓN
-Estamos preparando cuentas verificadas y un catálogo para compartir únicamente PDF. Las subidas y descargas de libros compartidos todavía no están habilitadas.
-Cuando se active, cada usuario descargará el PDF y creará el audiolibro en su teléfono. No se compartirán audios ni se guardarán en el servidor. Los PDF compartidos pasarán por validación, antivirus, reconstrucción y revisión de contenido antes de publicarse. Estas comprobaciones reducen riesgos, pero no garantizan que todo archivo esté libre de amenazas o contenido inapropiado.
+CATÁLOGO COMPARTIDO (OPCIONAL)
+Con una cuenta verificada puedes compartir PDF y descargar los que compartieron otras personas. Solo se comparten PDF: cada usuario crea el audiolibro en su teléfono y los audios nunca se suben al servidor. Cada PDF pasa por validación, antivirus, reconstrucción y revisión humana antes de publicarse, y puedes denunciar un libro o bloquear a quien lo publicó. Estas comprobaciones reducen riesgos, pero no garantizan que todo archivo esté libre de amenazas o contenido inapropiado.
 
 NARRA PLUS: COMPRA ÚNICA
 • Libros sin límite en tu biblioteca; sin Plus puedes conservar hasta 3 libros a la vez.
